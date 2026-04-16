@@ -640,45 +640,19 @@
         <label>Nombre *</label>
         <input class="form-control" id="part-nombre" placeholder="Mofle silenciador...">
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Categoria</label>
-          <select class="form-control" id="part-categoria">
-            <option>Mofles</option>
-            <option>Muelles</option>
-            <option>Suspension</option>
-            <option>Escape</option>
-            <option>Otro</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Unidad</label>
-          <select class="form-control" id="part-unit">
-            <option>Pieza</option>
-            <option>Kit</option>
-            <option>Par</option>
-          </select>
-        </div>
+      <div class="form-group">
+        <label>Categoría</label>
+        <select class="form-control" id="part-categoria">
+          <option>Mofles</option>
+          <option>Muelles</option>
+          <option>Suspension</option>
+          <option>Escape</option>
+          <option>Otro</option>
+        </select>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Costo ($) *</label>
-          <input class="form-control" id="part-costo" type="number" placeholder="800" min="0" step="0.01">
-        </div>
-        <div class="form-group">
-          <label>Venta ($) *</label>
-          <input class="form-control" id="part-venta" type="number" placeholder="1500" min="0" step="0.01">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Stock *</label>
-          <input class="form-control" id="part-stock" type="number" placeholder="10" min="0">
-        </div>
-        <div class="form-group">
-          <label>Stock Min</label>
-          <input class="form-control" id="part-min" type="number" placeholder="2" min="0">
-        </div>
+      <div class="form-group">
+        <label>Precio ($) *</label>
+        <input class="form-control" id="part-precio" type="number" placeholder="1500" min="0" step="0.01">
       </div>
     </div>
     <div class="modal-footer">
@@ -1336,22 +1310,23 @@ function renderInventario() {
 
 function openNewPartModal() {
   document.getElementById('part-id').value = '';
-  ['part-sku','part-nombre','part-costo','part-venta','part-stock','part-min'].forEach(id=>document.getElementById(id).value='');
+  ['part-sku','part-nombre','part-precio'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('part-categoria').value = 'Mofles';
-  document.getElementById('part-unit').value = 'Pieza';
   openModal('modal-part');
 }
 
 function savePart() {
   const sku = document.getElementById('part-sku').value.trim().toUpperCase();
   const nombre = document.getElementById('part-nombre').value.trim();
+  const precio = +document.getElementById('part-precio').value||0;
   if (!sku||!nombre) { toast('SKU y nombre requeridos.','danger'); return; }
   const id = document.getElementById('part-id').value;
-  let rows = DB.parts();
-  const obj = { id: id||DB.uid(), sku, nombre, categoria: document.getElementById('part-categoria').value, unit: document.getElementById('part-unit').value, costo: +document.getElementById('part-costo').value||0, venta: +document.getElementById('part-venta').value||0, stock: +document.getElementById('part-stock').value||0, min: +document.getElementById('part-min').value||0 };
+  let rows = DB.refacciones();
+  const obj = { id: id||DB.uid(), sku, nombre, categoria: document.getElementById('part-categoria').value, precio };
   if (id) rows = rows.map(p=>p.id===id?obj:p);
   else rows.push(obj);
-  DB.saveParts(rows);
+  DB.saveRefacciones(rows);
+  renderInventario();
   closeModal('modal-part');
   toast(id?'Refaccion actualizada.':'Refaccion registrada.');
 }
