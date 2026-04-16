@@ -910,6 +910,7 @@ function handleFileImport() {
     const workbook = XLSX.read(data, {type: 'array'});
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(sheet);
+    console.log('Filas importadas:', rows);
 
     if (importType === 'clientes') {
       importData = rows.map(r => ({
@@ -922,11 +923,12 @@ function handleFileImport() {
       showImportPreview('clientes', importData);
     } else if (importType === 'refacciones') {
       importData = rows.map(r => ({
-        sku: r.SKU || r['sku'] || '',
-        nombre: r.Nombre || r['nombre'] || r['Refaccion'] || '',
+        sku: r.SKU || r['sku'] || r['Código'] || r['codigo'] || '',
+        nombre: r.Nombre || r['nombre'] || r['Refaccion'] || r['refaccion'] || r.Descripción || r['descripción'] || '',
         categoria: r.Categoría || r['categoria'] || r['Categoria'] || '',
-        precio: r.Precio || r['precio'] || '0'
-      })).filter(r => r.sku && r.nombre);
+        precio: r.Precio || r['precio'] || r['Costo'] || r['costo'] || '0'
+      })).filter(r => r.sku || r.nombre);
+      console.log('Refacciones parseadas:', importData);
       showImportPreview('refacciones', importData);
     }
   };
