@@ -1,0 +1,1432 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Muelles y Mofles La Flecha</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    /* ─── VARIABLES - BRANDING ROJO/AZUL MARINO ─────────────────── */
+    :root {
+      --primary:   #dc2626;
+      --primary-d: #991b1b;
+      --secondary: #1e3a8a;
+      --danger:    #dc2626;
+      --success:   #057a55;
+      --warning:   #c27803;
+      --bg:        #f3f4f6;
+      --sidebar-w: 220px;
+      --white:     #ffffff;
+      --border:    #e5e7eb;
+      --text:      #111827;
+      --muted:     #6b7280;
+      --radius:    8px;
+      --shadow:    0 1px 3px rgba(0,0,0,.12);
+    }
+
+    /* ─── RESET ─────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+           font-size: 14px; background: var(--bg); color: var(--text); }
+    a { text-decoration: none; color: inherit; }
+    button { cursor: pointer; border: none; background: none; font: inherit; }
+    input, select, textarea { font: inherit; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+    th { font-weight: 600; font-size: 12px; text-transform: uppercase;
+         letter-spacing: .05em; color: var(--muted); background: #f9fafb; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f9fafb; }
+
+    /* ─── LAYOUT ─────────────────────────────────────────────── */
+    .app { display: flex; min-height: 100vh; }
+
+    /* Sidebar - ROJO OSCURO */
+    .sidebar {
+      width: var(--sidebar-w); background: linear-gradient(180deg, #7f1d1d 0%, #991b1b 100%);
+      color: #fecaca; display: flex; flex-direction: column; position: fixed;
+      top: 0; left: 0; bottom: 0; z-index: 100; transition: transform .25s;
+    }
+    .sidebar-logo {
+      padding: 16px; border-bottom: 2px solid rgba(255,255,255,.15);
+      text-align: center;
+    }
+    .sidebar-logo .logo-icon { font-size: 28px; margin-bottom: 6px; }
+    .sidebar-logo h1 { font-size: 14px; font-weight: 700; color: #fff; line-height: 1.2; }
+    .sidebar-logo p  { font-size: 10px; color: #fecaca; margin-top: 2px; }
+    .sidebar nav { flex: 1; overflow-y: auto; padding: 8px 0; }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 16px; border-radius: 6px; margin: 2px 8px;
+      transition: background .15s, color .15s; cursor: pointer;
+      font-size: 13px;
+    }
+    .nav-item:hover { background: rgba(255,255,255,.12); color: #fff; }
+    .nav-item.active { background: var(--primary); color: #fff; font-weight: 600; }
+    .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+    /* Main */
+    .main { margin-left: var(--sidebar-w); flex: 1; display: flex;
+            flex-direction: column; min-height: 100vh; }
+    .topbar {
+      background: var(--white); border-bottom: 3px solid var(--primary);
+      padding: 12px 20px; display: flex; align-items: center;
+      justify-content: space-between; position: sticky; top: 0; z-index: 50;
+    }
+    .topbar h2 { font-size: 17px; font-weight: 700; color: var(--secondary); }
+    .topbar-left { display: flex; align-items: center; gap: 12px; }
+    .hamburger { display: none; font-size: 20px; }
+    .content { padding: 20px; flex: 1; }
+
+    /* Mobile overlay */
+    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4);
+               z-index: 90; }
+    .overlay.show { display: block; }
+
+    /* ─── CARDS ──────────────────────────────────────────────── */
+    .card {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow);
+    }
+    .card-title { font-size: 12px; color: var(--muted); margin-bottom: 6px; font-weight: 600; }
+    .card-value { font-size: 28px; font-weight: 700; color: var(--primary); }
+    .card-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px,1fr));
+                 gap: 14px; margin-bottom: 20px; }
+
+    /* ─── SECTION HEADER ─────────────────────────────────────── */
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px; flex-wrap: wrap; gap: 10px;
+    }
+    .section-header h3 { font-size: 16px; font-weight: 700; color: var(--secondary); }
+    .search-bar {
+      padding: 7px 12px; border: 1px solid var(--border); border-radius: var(--radius);
+      width: 220px; outline: none; background: #f9fafb;
+    }
+    .search-bar:focus { border-color: var(--primary); background: var(--white); }
+    .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* ─── BUTTONS ────────────────────────────────────────────── */
+    .btn {
+      padding: 7px 14px; border-radius: var(--radius); font-size: 13px;
+      font-weight: 600; display: inline-flex; align-items: center; gap: 6px;
+      transition: opacity .15s, box-shadow .15s;
+    }
+    .btn:hover { opacity: .88; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-secondary { background: var(--secondary); color: #fff; }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-danger  { background: #dc2626;  color: #fff; }
+    .btn-outline {
+      background: var(--white); color: var(--text);
+      border: 1.5px solid var(--primary);
+    }
+    .btn-sm { padding: 4px 10px; font-size: 12px; }
+    .btn-icon { padding: 5px 8px; }
+
+    /* ─── TABLE WRAPPER ──────────────────────────────────────── */
+    .table-wrap {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow);
+      overflow-x: auto;
+    }
+    .empty-state { padding: 40px; text-align: center; color: var(--muted); }
+    .empty-state p { font-size: 16px; }
+    .empty-state small { font-size: 13px; }
+
+    /* ─── BADGES ─────────────────────────────────────────────── */
+    .badge {
+      padding: 3px 9px; border-radius: 20px; font-size: 11px;
+      font-weight: 600; display: inline-block;
+    }
+    .badge-red     { background: #fee2e2; color: #991b1b; }
+    .badge-yellow  { background: #fef3c7; color: #92400e; }
+    .badge-green   { background: #d1fae5; color: #065f46; }
+    .badge-blue    { background: #dbeafe; color: #1e40af; }
+    .badge-gray    { background: #f3f4f6; color: #374151; }
+    .badge-purple  { background: #ede9fe; color: #5b21b6; }
+
+    /* ─── MODAL ──────────────────────────────────────────────── */
+    .modal-backdrop {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45);
+      z-index: 200; align-items: center; justify-content: center; padding: 16px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: var(--white); border-radius: 10px; width: 100%;
+      max-width: 500px; max-height: 90vh; overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,.25);
+    }
+    .modal-header {
+      padding: 16px 20px; border-bottom: 2px solid var(--primary);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .modal-header h3 { font-size: 16px; font-weight: 700; color: var(--secondary); }
+    .modal-close { font-size: 20px; color: var(--muted); cursor: pointer; }
+    .modal-close:hover { color: var(--text); }
+    .modal-body { padding: 20px; }
+    .modal-footer {
+      padding: 14px 20px; border-top: 1px solid var(--border);
+      display: flex; justify-content: flex-end; gap: 10px;
+    }
+
+    /* ─── FORMS ──────────────────────────────────────────────── */
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 600;
+                        color: var(--secondary); margin-bottom: 5px; }
+    .form-control {
+      width: 100%; padding: 8px 11px; border: 1.5px solid var(--border);
+      border-radius: var(--radius); outline: none; background: var(--white);
+      transition: border-color .15s;
+    }
+    .form-control:focus { border-color: var(--primary); background: #fff9f7; }
+    .form-control.error { border-color: var(--danger); }
+    select.form-control { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7280'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
+
+    /* ─── TOAST ──────────────────────────────────────────────── */
+    .toast-container { position: fixed; top: 16px; right: 16px; z-index: 999;
+                       display: flex; flex-direction: column; gap: 8px; }
+    .toast {
+      padding: 12px 18px; border-radius: 8px; color: #fff; font-size: 13px;
+      font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,.2);
+      animation: slideIn .25s ease; max-width: 300px;
+    }
+    .toast-success { background: var(--success); }
+    .toast-danger  { background: var(--primary); }
+    .toast-info    { background: var(--secondary); }
+    @keyframes slideIn { from { transform: translateX(110%); opacity: 0; }
+                         to   { transform: translateX(0);    opacity: 1; } }
+
+    /* ─── STOCK ALERT ────────────────────────────────────────── */
+    .stock-low { color: var(--danger); font-weight: 700; }
+    .stock-ok  { color: var(--success); font-weight: 600; }
+
+    /* ─── EXPORT SECTION ─────────────────────────────────────── */
+    .export-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px,1fr));
+                   gap: 14px; }
+    .export-card {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px; text-align: center;
+      box-shadow: var(--shadow);
+    }
+    .export-card .icon { font-size: 36px; margin-bottom: 10px; }
+    .export-card h4 { font-size: 14px; font-weight: 600; margin-bottom: 6px; color: var(--secondary); }
+    .export-card p { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+    .export-card .actions { display: flex; gap: 8px; justify-content: center; }
+
+    /* ─── DVI SECTION ────────────────────────────────────────── */
+    .dvi-container { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .dvi-area-list { background: var(--white); border: 1px solid var(--border);
+                     border-radius: var(--radius); padding: 16px; }
+    .dvi-area-item {
+      padding: 10px; border: 1px solid var(--border); border-radius: 6px;
+      margin-bottom: 8px; cursor: pointer; transition: all .2s;
+    }
+    .dvi-area-item:hover { background: #fff9f7; border-color: var(--primary); }
+    .dvi-area-item.selected { background: #fee2e2; border-color: var(--primary); }
+    .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px,1fr));
+                  gap: 10px; margin-top: 12px; }
+    .photo-thumb { position: relative; border-radius: 6px; overflow: hidden;
+                   border: 1px solid var(--border); }
+    .photo-thumb img { width: 100%; height: 100px; object-fit: cover; display: block; }
+    .photo-remove { position: absolute; top: 0; right: 0; background: rgba(220,38,38,.8);
+                    color: #fff; border: none; padding: 2px 6px; cursor: pointer; font-size: 12px; }
+
+    /* ─── RESPONSIVE ─────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .main { margin-left: 0; }
+      .hamburger { display: block; }
+      .form-row { grid-template-columns: 1fr; }
+      .search-bar { width: 100%; }
+      .stat-grid { grid-template-columns: 1fr 1fr; }
+      .dvi-container { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 480px) {
+      .stat-grid { grid-template-columns: 1fr; }
+      .topbar h2 { font-size: 15px; }
+      .content { padding: 12px; }
+    }
+
+    /* ─── PAGES ──────────────────────────────────────────────── */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ─── FILTERS BAR ────────────────────────────────────────── */
+    .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .filter-chip {
+      padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;
+      border: 1.5px solid var(--border); background: var(--white); cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+    .filter-chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+    /* CHART PLACEHOLDER */
+    .chart-placeholder { background: #f9fafb; border: 1px dashed var(--border);
+                          border-radius: 8px; padding: 40px; text-align: center;
+                          color: var(--muted); }
+  </style>
+</head>
+<body>
+
+<!-- ─── SIDEBAR ──────────────────────────────────────────────── -->
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">↗️</div>
+    <h1>Muelles y Mofles<br>La Flecha</h1>
+    <p>Monclova, Coah.</p>
+  </div>
+  <nav>
+    <div class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')">
+      <span class="nav-icon">📊</span> Dashboard
+    </div>
+    <div class="nav-item" data-page="clientes" onclick="navigate('clientes')">
+      <span class="nav-icon">👤</span> Clientes
+    </div>
+    <div class="nav-item" data-page="vehiculos" onclick="navigate('vehiculos')">
+      <span class="nav-icon">🚗</span> Vehiculos
+    </div>
+    <div class="nav-item" data-page="ordenes" onclick="navigate('ordenes')">
+      <span class="nav-icon">📋</span> Ordenes
+    </div>
+    <div class="nav-item" data-page="inventario" onclick="navigate('inventario')">
+      <span class="nav-icon">📦</span> Inventario
+    </div>
+    <div class="nav-item" data-page="dvi" onclick="navigate('dvi')">
+      <span class="nav-icon">📸</span> DVI
+    </div>
+    <div class="nav-item" data-page="reportes" onclick="navigate('reportes')">
+      <span class="nav-icon">📈</span> Reportes
+    </div>
+    <div class="nav-item" data-page="exportar" onclick="navigate('exportar')">
+      <span class="nav-icon">📄</span> Exportar
+    </div>
+  </nav>
+</aside>
+
+<!-- ─── MAIN ─────────────────────────────────────────────────── -->
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="hamburger" onclick="toggleSidebar()">☰</button>
+      <h2 id="page-title">Dashboard</h2>
+    </div>
+  </header>
+
+  <main class="content">
+
+    <!-- ══ DASHBOARD ════════════════════════════════════════════ -->
+    <section class="page active" id="page-dashboard">
+      <div class="stat-grid" id="dash-stats"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px" id="dash-grid">
+        <div class="card">
+          <div style="font-weight:700;margin-bottom:12px;color:var(--secondary)">📋 Ordenes Recientes</div>
+          <div id="dash-orders-list"><p style="color:var(--muted);font-size:13px">Sin ordenes.</p></div>
+        </div>
+        <div class="card">
+          <div style="font-weight:700;margin-bottom:12px;color:var(--secondary)">📦 Alertas Stock Bajo</div>
+          <div id="dash-stock-list"><p style="color:var(--muted);font-size:13px">Sin alertas.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ CLIENTES ══════════════════════════════════════════════ -->
+    <section class="page" id="page-clientes">
+      <div class="section-header">
+        <h3>👥 Clientes</h3>
+        <div class="btn-group">
+          <input type="text" class="search-bar" placeholder="Buscar cliente..." id="search-clientes" oninput="renderClientes()">
+          <button class="btn btn-primary" onclick="openModal('modal-cliente')">+ Nuevo</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table><thead><tr><th>Nombre</th><th>Telefono</th><th>Email</th><th>Vehiculos</th><th>Acciones</th></tr></thead>
+          <tbody id="tbody-clientes"></tbody></table>
+      </div>
+    </section>
+
+    <!-- ══ VEHICULOS ═════════════════════════════════════════════ -->
+    <section class="page" id="page-vehiculos">
+      <div class="section-header">
+        <h3>🚗 Vehiculos</h3>
+        <div class="btn-group">
+          <input type="text" class="search-bar" placeholder="Placa, marca..." id="search-vehiculos" oninput="renderVehiculos()">
+          <button class="btn btn-primary" onclick="openModal('modal-vehiculo')">+ Nuevo</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table><thead><tr><th>Placa</th><th>Marca/Modelo</th><th>Año</th><th>Cliente</th><th>Color</th><th>Acciones</th></tr></thead>
+          <tbody id="tbody-vehiculos"></tbody></table>
+      </div>
+    </section>
+
+    <!-- ══ ORDENES ═══════════════════════════════════════════════ -->
+    <section class="page" id="page-ordenes">
+      <div class="section-header">
+        <h3>📋 Ordenes de Trabajo</h3>
+        <div class="btn-group">
+          <input type="text" class="search-bar" placeholder="Buscar orden..." id="search-ordenes" oninput="renderOrdenes()">
+          <button class="btn btn-primary" onclick="openModal('modal-orden')">+ Nueva</button>
+        </div>
+      </div>
+      <div class="filters" id="orden-filters">
+        <span class="filter-chip active" data-status="all" onclick="setOrdenFilter('all')">Todas</span>
+        <span class="filter-chip" data-status="recibido" onclick="setOrdenFilter('recibido')">Recibido</span>
+        <span class="filter-chip" data-status="diagnostico" onclick="setOrdenFilter('diagnostico')">Diagnostico</span>
+        <span class="filter-chip" data-status="en_proceso" onclick="setOrdenFilter('en_proceso')">En Proceso</span>
+        <span class="filter-chip" data-status="completado" onclick="setOrdenFilter('completado')">Completado</span>
+      </div>
+      <div class="table-wrap">
+        <table><thead><tr><th>#</th><th>Vehiculo</th><th>Cliente</th><th>Estado</th><th>Total</th><th>Fecha</th><th>Acciones</th></tr></thead>
+          <tbody id="tbody-ordenes"></tbody></table>
+      </div>
+    </section>
+
+    <!-- ══ INVENTARIO ════════════════════════════════════════════ -->
+    <section class="page" id="page-inventario">
+      <div class="section-header">
+        <h3>📦 Inventario de Refacciones</h3>
+        <div class="btn-group">
+          <input type="text" class="search-bar" placeholder="Refaccion, SKU..." id="search-inventario" oninput="renderInventario()">
+          <button class="btn btn-primary" onclick="openModal('modal-part')">+ Nueva</button>
+        </div>
+      </div>
+      <div class="filters">
+        <span class="filter-chip active" data-inv="all" onclick="setInvFilter('all')">Todas</span>
+        <span class="filter-chip" data-inv="low" onclick="setInvFilter('low')">Stock Bajo</span>
+      </div>
+      <div class="table-wrap">
+        <table><thead><tr><th>SKU</th><th>Refaccion</th><th>Stock</th><th>Min</th><th>Costo</th><th>Venta</th><th>Acciones</th></tr></thead>
+          <tbody id="tbody-inventario"></tbody></table>
+      </div>
+    </section>
+
+    <!-- ══ DVI ═══════════════════════════════════════════════════ -->
+    <section class="page" id="page-dvi">
+      <div class="section-header">
+        <h3>📸 Inspección Digital del Vehículo (DVI)</h3>
+      </div>
+      <div class="card">
+        <div style="margin-bottom:14px">
+          <label style="display:block;font-weight:600;color:var(--secondary);margin-bottom:8px">Selecciona Orden de Trabajo</label>
+          <select id="dvi-orden-select" class="form-control" onchange="loadDVIForOrden()">
+            <option value="">Cargar ordenes...</option>
+          </select>
+        </div>
+      </div>
+      <div id="dvi-content" style="display:none;margin-top:16px">
+        <div class="dvi-container">
+          <div>
+            <div style="font-weight:600;margin-bottom:10px;color:var(--secondary)">Áreas del Vehículo</div>
+            <div class="dvi-area-list" id="dvi-areas"></div>
+          </div>
+          <div>
+            <div style="font-weight:600;margin-bottom:10px;color:var(--secondary)" id="dvi-area-title">Selecciona un área</div>
+            <div>
+              <label style="display:block;font-size:12px;color:var(--secondary);font-weight:600;margin-bottom:8px">Condición</label>
+              <select id="dvi-condition" class="form-control" style="margin-bottom:12px">
+                <option value="ok">✓ OK</option>
+                <option value="attention">⚠ Requiere Atención</option>
+                <option value="critical">🔴 Crítico</option>
+              </select>
+              <label style="display:block;font-size:12px;color:var(--secondary);font-weight:600;margin-bottom:8px">Observaciones</label>
+              <textarea id="dvi-notes" class="form-control" rows="3" placeholder="Describe el hallazgo..."></textarea>
+              <label style="display:block;font-size:12px;color:var(--secondary);font-weight:600;margin-top:12px;margin-bottom:8px">Subir Fotos</label>
+              <input type="file" id="dvi-photo-input" class="form-control" accept="image/*" multiple onchange="addPhotos()">
+              <div class="photo-grid" id="dvi-photos"></div>
+              <button class="btn btn-primary" style="margin-top:12px;width:100%" onclick="saveDVIArea()">Guardar Área</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ REPORTES ══════════════════════════════════════════════ -->
+    <section class="page" id="page-reportes">
+      <div class="section-header">
+        <h3>📈 Reportes de Ganancias</h3>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px">
+        <div class="card">
+          <div class="card-title">Ingresos Hoy</div>
+          <div class="card-value" id="report-today">$0.00</div>
+          <div class="card-sub" id="report-today-orders">0 ordenes</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Esta Semana</div>
+          <div class="card-value" id="report-week">$0.00</div>
+          <div class="card-sub" id="report-week-orders">0 ordenes</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Este Mes</div>
+          <div class="card-value" id="report-month">$0.00</div>
+          <div class="card-sub" id="report-month-orders">0 ordenes</div>
+        </div>
+      </div>
+      <div class="card">
+        <div style="font-weight:600;margin-bottom:14px;color:var(--secondary)">Desglose por Mano de Obra vs Refacciones</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+          <div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Mano de Obra (Mes)</div>
+            <div style="font-size:24px;font-weight:700;color:var(--primary)" id="report-labor-month">$0.00</div>
+          </div>
+          <div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Refacciones (Mes)</div>
+            <div style="font-size:24px;font-weight:700;color:var(--secondary)" id="report-parts-month">$0.00</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ EXPORTAR ══════════════════════════════════════════════ -->
+    <section class="page" id="page-exportar">
+      <div style="margin-bottom:20px">
+        <h3 style="font-size:16px;font-weight:700;margin-bottom:6px;color:var(--secondary)">📥 Exportar Datos</h3>
+        <p style="color:var(--muted);font-size:13px">Descarga tu información en Excel para análisis y respaldo.</p>
+      </div>
+      <div class="export-grid">
+        <div class="export-card">
+          <div class="icon">👥</div>
+          <h4>Clientes</h4>
+          <p>Listado de clientes registrados.</p>
+          <div class="actions">
+            <button class="btn btn-outline btn-sm" onclick="exportCSV('clientes')">CSV</button>
+            <button class="btn btn-primary btn-sm" onclick="exportXLSX('clientes')">Excel</button>
+          </div>
+        </div>
+        <div class="export-card">
+          <div class="icon">🚗</div>
+          <h4>Vehiculos</h4>
+          <p>Catalogo de vehiculos.</p>
+          <div class="actions">
+            <button class="btn btn-outline btn-sm" onclick="exportCSV('vehiculos')">CSV</button>
+            <button class="btn btn-primary btn-sm" onclick="exportXLSX('vehiculos')">Excel</button>
+          </div>
+        </div>
+        <div class="export-card">
+          <div class="icon">📋</div>
+          <h4>Ordenes</h4>
+          <p>Historial de órdenes.</p>
+          <div class="actions">
+            <button class="btn btn-outline btn-sm" onclick="exportCSV('ordenes')">CSV</button>
+            <button class="btn btn-primary btn-sm" onclick="exportXLSX('ordenes')">Excel</button>
+          </div>
+        </div>
+        <div class="export-card">
+          <div class="icon">📦</div>
+          <h4>Inventario</h4>
+          <p>Refacciones y stock.</p>
+          <div class="actions">
+            <button class="btn btn-outline btn-sm" onclick="exportCSV('inventario')">CSV</button>
+            <button class="btn btn-primary btn-sm" onclick="exportXLSX('inventario')">Excel</button>
+          </div>
+        </div>
+        <div class="export-card" style="background:linear-gradient(135deg,#fee2e210,#fee2e220)">
+          <div class="icon">📊</div>
+          <h4>Reporte Completo</h4>
+          <p>Un Excel con todas las tablas.</p>
+          <div class="actions">
+            <button class="btn btn-primary" onclick="exportAll()">⬇ Descargar Todo</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ─── TOAST CONTAINER ──────────────────────────────────────── -->
+<div class="toast-container" id="toasts"></div>
+
+<!-- ═══════════════ MODALS ═══════════════════════════════════════ -->
+
+<!-- MODAL CLIENTE -->
+<div class="modal-backdrop" id="modal-cliente">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Nuevo Cliente</h3>
+      <button class="modal-close" onclick="closeModal('modal-cliente')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="cliente-id">
+      <div class="form-group">
+        <label>Nombre Completo *</label>
+        <input class="form-control" id="cliente-nombre" placeholder="Juan Perez">
+      </div>
+      <div class="form-group">
+        <label>Telefono *</label>
+        <input class="form-control" id="cliente-telefono" placeholder="5512345678">
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input class="form-control" id="cliente-email" type="email" placeholder="juan@email.com">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-cliente')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCliente()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL VEHICULO -->
+<div class="modal-backdrop" id="modal-vehiculo">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Nuevo Vehiculo</h3>
+      <button class="modal-close" onclick="closeModal('modal-vehiculo')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="vehiculo-id">
+      <div class="form-group">
+        <label>Cliente Propietario *</label>
+        <select class="form-control" id="vehiculo-cliente"></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Placa *</label>
+          <input class="form-control" id="vehiculo-placa" placeholder="ABC-123" style="text-transform:uppercase">
+        </div>
+        <div class="form-group">
+          <label>Color</label>
+          <input class="form-control" id="vehiculo-color" placeholder="Blanco">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Marca *</label>
+          <input class="form-control" id="vehiculo-marca" placeholder="Toyota">
+        </div>
+        <div class="form-group">
+          <label>Modelo *</label>
+          <input class="form-control" id="vehiculo-modelo" placeholder="Corolla">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Año</label>
+          <input class="form-control" id="vehiculo-anio" type="number" placeholder="2020" min="1960">
+        </div>
+        <div class="form-group">
+          <label>Kilometraje</label>
+          <input class="form-control" id="vehiculo-km" type="number" placeholder="45000">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-vehiculo')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveVehiculo()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ORDEN -->
+<div class="modal-backdrop" id="modal-orden">
+  <div class="modal" style="max-width:550px">
+    <div class="modal-header">
+      <h3>Nueva Orden de Trabajo</h3>
+      <button class="modal-close" onclick="closeModal('modal-orden')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="orden-id">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Cliente *</label>
+          <select class="form-control" id="orden-cliente" onchange="loadVehiculosCliente()"></select>
+        </div>
+        <div class="form-group">
+          <label>Vehiculo *</label>
+          <select class="form-control" id="orden-vehiculo"></select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Descripcion del Servicio *</label>
+        <textarea class="form-control" id="orden-descripcion" rows="2" placeholder="Cambio de aceite, revision..."></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Estado</label>
+          <select class="form-control" id="orden-estado">
+            <option value="recibido">Recibido</option>
+            <option value="diagnostico">Diagnostico</option>
+            <option value="en_proceso">En Proceso</option>
+            <option value="completado">Completado</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Prioridad</label>
+          <select class="form-control" id="orden-prioridad">
+            <option value="normal">Normal</option>
+            <option value="alta">Alta</option>
+            <option value="urgente">Urgente</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Mano de Obra ($)</label>
+          <input class="form-control" id="orden-mano-obra" type="number" placeholder="500" min="0">
+        </div>
+        <div class="form-group">
+          <label>Refacciones ($)</label>
+          <input class="form-control" id="orden-refacciones" type="number" placeholder="200" min="0">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Notas</label>
+        <textarea class="form-control" id="orden-notas" rows="2" placeholder="Observaciones..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-orden')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveOrden()">Guardar Orden</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL REFACCION -->
+<div class="modal-backdrop" id="modal-part">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Nueva Refaccion</h3>
+      <button class="modal-close" onclick="closeModal('modal-part')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="part-id">
+      <div class="form-group">
+        <label>SKU / Codigo *</label>
+        <input class="form-control" id="part-sku" placeholder="MFL-001">
+      </div>
+      <div class="form-group">
+        <label>Nombre *</label>
+        <input class="form-control" id="part-nombre" placeholder="Mofle silenciador...">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Categoria</label>
+          <select class="form-control" id="part-categoria">
+            <option>Mofles</option>
+            <option>Muelles</option>
+            <option>Suspension</option>
+            <option>Escape</option>
+            <option>Otro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Unidad</label>
+          <select class="form-control" id="part-unit">
+            <option>Pieza</option>
+            <option>Kit</option>
+            <option>Par</option>
+            <option>Juego</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Precio Costo ($) *</label>
+          <input class="form-control" id="part-costo" type="number" placeholder="800" min="0" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>Precio Venta ($) *</label>
+          <input class="form-control" id="part-venta" type="number" placeholder="1500" min="0" step="0.01">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Stock *</label>
+          <input class="form-control" id="part-stock" type="number" placeholder="10" min="0">
+        </div>
+        <div class="form-group">
+          <label>Stock Minimo</label>
+          <input class="form-control" id="part-min" type="number" placeholder="2" min="0">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-part')">Cancelar</button>
+      <button class="btn btn-primary" onclick="savePart()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   DATA LAYER
+═══════════════════════════════════════════════════════════════ */
+const DB = {
+  get: k => JSON.parse(localStorage.getItem(k) || '[]'),
+  set: (k, v) => localStorage.setItem(k, JSON.stringify(v)),
+  uid: () => Date.now().toString(36) + Math.random().toString(36).slice(2),
+
+  clientes:  () => DB.get('mfl_clientes'),
+  vehiculos: () => DB.get('mfl_vehiculos'),
+  ordenes:   () => DB.get('mfl_ordenes'),
+  parts:     () => DB.get('mfl_parts'),
+  dvis:      () => DB.get('mfl_dvis'),
+
+  saveClientes:  v => DB.set('mfl_clientes',  v),
+  saveVehiculos: v => DB.set('mfl_vehiculos', v),
+  saveOrdenes:   v => DB.set('mfl_ordenes',   v),
+  saveParts:     v => DB.set('mfl_parts',     v),
+  saveDVIs:      v => DB.set('mfl_dvis',      v),
+};
+
+/* Seed demo data */
+(function seedDemo() {
+  if (DB.clientes().length) return;
+  const c1 = DB.uid();
+  DB.saveClientes([
+    { id: c1, nombre: 'Roberto Gomez', telefono: '8614556677', email: 'r.gomez@email.com' },
+    { id: DB.uid(), nombre: 'Maria Lopez', telefono: '8614556688', email: '' },
+  ]);
+  const v1 = DB.uid();
+  DB.saveVehiculos([
+    { id: v1, clienteId: c1, placa: 'ABC-1234', marca: 'Chevrolet', modelo: 'Silverado', anio: 2018, color: 'Blanco', km: 125000 },
+  ]);
+  DB.saveOrdenes([
+    { id: DB.uid(), clienteId: c1, vehiculoId: v1, descripcion: 'Cambio de mofle y muelles', estado: 'en_proceso', prioridad: 'normal', manoObra: 800, refacciones: 3200, notas: 'Cliente urgido', creadoEn: new Date().toISOString() },
+  ]);
+  DB.saveParts([
+    { id: DB.uid(), sku: 'MFL-001', nombre: 'Mofle Silenciador Doble', categoria: 'Mofles', unit: 'Pieza', costo: 750, venta: 1500, stock: 5, min: 2 },
+    { id: DB.uid(), sku: 'MUE-001', nombre: 'Muelle Trasero Premium', categoria: 'Muelles', unit: 'Par', costo: 600, venta: 1200, stock: 1, min: 2 },
+    { id: DB.uid(), sku: 'ESC-001', nombre: 'Tubo de Escape 3 piezas', categoria: 'Escape', unit: 'Kit', costo: 400, venta: 900, stock: 8, min: 3 },
+  ]);
+})();
+
+/* ─── ROUTING ───────────────────────────────────────────────── */
+const PAGE_TITLES = {
+  dashboard: '📊 Dashboard',
+  clientes: '👥 Clientes',
+  vehiculos: '🚗 Vehiculos',
+  ordenes: '📋 Ordenes de Trabajo',
+  inventario: '📦 Inventario',
+  dvi: '📸 DVI',
+  reportes: '📈 Reportes',
+  exportar: '📄 Exportar',
+};
+
+function navigate(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelector(`[data-page="${page}"]`).classList.add('active');
+  document.getElementById('page-title').textContent = PAGE_TITLES[page] || page;
+  closeSidebar();
+
+  const renderers = {
+    dashboard: renderDashboard,
+    clientes: renderClientes,
+    vehiculos: renderVehiculos,
+    ordenes: renderOrdenes,
+    inventario: renderInventario,
+    dvi: renderDVI,
+    reportes: renderReportes,
+  };
+  if (renderers[page]) renderers[page]();
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('show');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+}
+
+/* ─── MODALS ────────────────────────────────────────────────── */
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-backdrop').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+/* ─── TOAST ─────────────────────────────────────────────────── */
+function toast(msg, type = 'success') {
+  const t = document.createElement('div');
+  t.className = `toast toast-${type}`;
+  t.textContent = msg;
+  document.getElementById('toasts').appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+
+/* ─── HELPERS ───────────────────────────────────────────────── */
+const STATUS_LABELS = {
+  recibido: ['badge-gray', 'Recibido'],
+  diagnostico: ['badge-yellow', 'Diagnostico'],
+  en_proceso: ['badge-red', 'En Proceso'],
+  completado: ['badge-green', 'Completado'],
+};
+function badge(data, val) {
+  const [cls, lbl] = data[val] || ['badge-gray', val];
+  return `<span class="badge ${cls}">${lbl}</span>`;
+}
+function fmt(n) { return '$' + Number(n||0).toLocaleString('es-MX', {minimumFractionDigits:2}); }
+function fmtDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('es-MX', {day:'2-digit',month:'short',year:'numeric'});
+}
+function getClienteName(id) { return DB.clientes().find(c=>c.id===id)?.nombre || '—'; }
+function getVehiculoLabel(id) {
+  const v = DB.vehiculos().find(v=>v.id===id);
+  return v ? `${v.placa} ${v.marca}` : '—';
+}
+
+/* ─── DASHBOARD ─────────────────────────────────────────────── */
+function renderDashboard() {
+  const clientes  = DB.clientes();
+  const vehiculos = DB.vehiculos();
+  const ordenes   = DB.ordenes();
+  const parts     = DB.parts();
+
+  const activas   = ordenes.filter(o => !['completado'].includes(o.estado)).length;
+  const hoy       = ordenes.filter(o => o.creadoEn?.startsWith(new Date().toISOString().slice(0,10)));
+  const ingresoHoy= hoy.reduce((s,o)=>s+(+o.manoObra||0)+(+o.refacciones||0),0);
+  const stockBajo = parts.filter(p => +p.stock <= +p.min).length;
+
+  document.getElementById('dash-stats').innerHTML = `
+    <div class="card"><div class="card-title">Clientes</div>
+      <div class="card-value">${clientes.length}</div></div>
+    <div class="card"><div class="card-title">Ordenes Activas</div>
+      <div class="card-value" style="color:var(--primary)">${activas}</div></div>
+    <div class="card"><div class="card-title">Ingresos Hoy</div>
+      <div class="card-value" style="color:var(--primary)">${fmt(ingresoHoy)}</div></div>
+    <div class="card"><div class="card-title">Alertas Stock</div>
+      <div class="card-value" style="color:${stockBajo?'var(--primary)':'var(--success)'}">${stockBajo}</div></div>
+  `;
+
+  const recent = [...ordenes].sort((a,b)=>b.creadoEn?.localeCompare(a.creadoEn||'')).slice(0,5);
+  document.getElementById('dash-orders-list').innerHTML = recent.length
+    ? recent.map(o=>`<div style="padding:8px;border-bottom:1px solid var(--border)">
+        <div style="font-weight:600;font-size:13px">${getVehiculoLabel(o.vehiculoId)}</div>
+        <div style="font-size:12px;color:var(--muted)">${getClienteName(o.clienteId)} • ${fmt((+o.manoObra||0)+(+o.refacciones||0))}</div></div>`).join('')
+    : '<p style="color:var(--muted);font-size:13px">Sin ordenes.</p>';
+
+  const lowParts = parts.filter(p=>+p.stock<=+p.min);
+  document.getElementById('dash-stock-list').innerHTML = lowParts.length
+    ? lowParts.map(p=>`<div style="padding:8px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-size:13px;font-weight:600">${p.nombre}</div><div style="font-size:11px;color:var(--muted)">${p.sku}</div></div>
+        <div style="color:var(--primary);font-weight:700">${p.stock}</div></div>`).join('')
+    : '<p style="color:var(--muted);font-size:13px">✓ Sin alertas.</p>';
+}
+
+/* ─── CLIENTES ──────────────────────────────────────────────── */
+function renderClientes() {
+  const q = (document.getElementById('search-clientes')?.value||'').toLowerCase();
+  let rows = DB.clientes();
+  if (q) rows = rows.filter(c=>c.nombre.toLowerCase().includes(q)||c.telefono.includes(q));
+
+  const vehiculos = DB.vehiculos();
+  document.getElementById('tbody-clientes').innerHTML = rows.length
+    ? rows.map(c => {
+        const nveh = vehiculos.filter(v=>v.clienteId===c.id).length;
+        return `<tr>
+          <td><strong>${c.nombre}</strong></td>
+          <td>${c.telefono}</td>
+          <td>${c.email||'—'}</td>
+          <td><span class="badge badge-red">${nveh}</span></td>
+          <td>
+            <button class="btn btn-outline btn-sm btn-icon" onclick="editCliente('${c.id}')">✎</button>
+            <button class="btn btn-danger btn-sm btn-icon" onclick="deleteCliente('${c.id}')">🗑</button>
+          </td>
+        </tr>`;
+      }).join('')
+    : `<tr><td colspan="5" class="empty-state">📭 Sin clientes</td></tr>`;
+}
+
+function editCliente(id) {
+  const c = DB.clientes().find(c=>c.id===id);
+  if (!c) return;
+  document.getElementById('cliente-id').value = c.id;
+  document.getElementById('cliente-nombre').value = c.nombre;
+  document.getElementById('cliente-telefono').value = c.telefono;
+  document.getElementById('cliente-email').value = c.email||'';
+  openModal('modal-cliente');
+}
+
+function saveCliente() {
+  const nombre = document.getElementById('cliente-nombre').value.trim();
+  const tel = document.getElementById('cliente-telefono').value.trim();
+  if (!nombre || !tel) { toast('Nombre y telefono requeridos.','danger'); return; }
+
+  const id = document.getElementById('cliente-id').value;
+  let rows = DB.clientes();
+  const obj = { id: id || DB.uid(), nombre, telefono: tel, email: document.getElementById('cliente-email').value.trim() };
+  if (id) rows = rows.map(c => c.id===id ? obj : c);
+  else rows.push(obj);
+  DB.saveClientes(rows);
+  closeModal('modal-cliente');
+  renderClientes();
+  toast(id ? 'Cliente actualizado.' : 'Cliente registrado.');
+}
+
+function deleteCliente(id) {
+  if (!confirm('¿Eliminar cliente?')) return;
+  DB.saveClientes(DB.clientes().filter(c=>c.id!==id));
+  renderClientes();
+  toast('Cliente eliminado.','info');
+}
+
+/* ─── VEHICULOS ─────────────────────────────────────────────── */
+function renderVehiculos() {
+  const q = (document.getElementById('search-vehiculos')?.value||'').toLowerCase();
+  let rows = DB.vehiculos();
+  if (q) rows = rows.filter(v=>v.placa.toLowerCase().includes(q)||v.marca.toLowerCase().includes(q));
+
+  document.getElementById('tbody-vehiculos').innerHTML = rows.length
+    ? rows.map(v=>`<tr>
+        <td><strong>${v.placa}</strong></td>
+        <td>${v.marca} ${v.modelo}</td>
+        <td>${v.anio||'—'}</td>
+        <td>${getClienteName(v.clienteId)}</td>
+        <td>${v.color||'—'}</td>
+        <td>
+          <button class="btn btn-outline btn-sm btn-icon" onclick="editVehiculo('${v.id}')">✎</button>
+          <button class="btn btn-danger btn-sm btn-icon" onclick="deleteVehiculo('${v.id}')">🗑</button>
+        </td>
+      </tr>`).join('')
+    : `<tr><td colspan="6" class="empty-state">📭 Sin vehiculos</td></tr>`;
+}
+
+function populateClienteSelect(selectId, selectedId) {
+  const sel = document.getElementById(selectId);
+  sel.innerHTML = '<option value="">-- Seleccionar --</option>' +
+    DB.clientes().map(c=>`<option value="${c.id}"${c.id===selectedId?' selected':''}>${c.nombre}</option>`).join('');
+}
+
+function editVehiculo(id) {
+  const v = DB.vehiculos().find(v=>v.id===id);
+  if (!v) return;
+  document.getElementById('vehiculo-id').value = v.id;
+  document.getElementById('vehiculo-placa').value = v.placa;
+  document.getElementById('vehiculo-marca').value = v.marca;
+  document.getElementById('vehiculo-modelo').value = v.modelo;
+  document.getElementById('vehiculo-color').value = v.color||'';
+  document.getElementById('vehiculo-anio').value = v.anio||'';
+  document.getElementById('vehiculo-km').value = v.km||'';
+  populateClienteSelect('vehiculo-cliente', v.clienteId);
+  openModal('modal-vehiculo');
+}
+
+function saveVehiculo() {
+  const clienteId = document.getElementById('vehiculo-cliente').value;
+  const placa = document.getElementById('vehiculo-placa').value.trim().toUpperCase();
+  const marca = document.getElementById('vehiculo-marca').value.trim();
+  const modelo = document.getElementById('vehiculo-modelo').value.trim();
+  if (!clienteId||!placa||!marca||!modelo) { toast('Campos requeridos.','danger'); return; }
+
+  const id = document.getElementById('vehiculo-id').value;
+  let rows = DB.vehiculos();
+  const obj = {
+    id: id||DB.uid(), clienteId, placa, marca, modelo,
+    color: document.getElementById('vehiculo-color').value.trim(),
+    anio: +document.getElementById('vehiculo-anio').value||null,
+    km: +document.getElementById('vehiculo-km').value||0,
+  };
+  if (id) rows = rows.map(v=>v.id===id?obj:v);
+  else rows.push(obj);
+  DB.saveVehiculos(rows);
+  closeModal('modal-vehiculo');
+  renderVehiculos();
+  toast(id?'Vehiculo actualizado.':'Vehiculo registrado.');
+}
+
+function deleteVehiculo(id) {
+  if (!confirm('¿Eliminar vehiculo?')) return;
+  DB.saveVehiculos(DB.vehiculos().filter(v=>v.id!==id));
+  renderVehiculos();
+  toast('Vehiculo eliminado.','info');
+}
+
+/* ─── ORDENES ───────────────────────────────────────────────── */
+let ordenFilter = 'all';
+function setOrdenFilter(status) {
+  ordenFilter = status;
+  document.querySelectorAll('[data-status]').forEach(el=>el.classList.toggle('active', el.dataset.status===status));
+  renderOrdenes();
+}
+
+function renderOrdenes() {
+  const q = (document.getElementById('search-ordenes')?.value||'').toLowerCase();
+  let rows = DB.ordenes();
+  if (ordenFilter !== 'all') rows = rows.filter(o=>o.estado===ordenFilter);
+  if (q) rows = rows.filter(o=>getClienteName(o.clienteId).toLowerCase().includes(q)||o.descripcion?.toLowerCase().includes(q));
+  rows = [...rows].sort((a,b)=>b.creadoEn?.localeCompare(a.creadoEn||''));
+
+  document.getElementById('tbody-ordenes').innerHTML = rows.length
+    ? rows.map((o,i)=>`<tr>
+        <td><strong>#${String(rows.length-i).padStart(4,'0')}</strong></td>
+        <td>${getVehiculoLabel(o.vehiculoId)}</td>
+        <td>${getClienteName(o.clienteId)}</td>
+        <td>${badge(STATUS_LABELS,o.estado)}</td>
+        <td>${fmt((+o.manoObra||0)+(+o.refacciones||0))}</td>
+        <td>${fmtDate(o.creadoEn)}</td>
+        <td>
+          <button class="btn btn-outline btn-sm btn-icon" onclick="editOrden('${o.id}')">✎</button>
+          <button class="btn btn-danger btn-sm btn-icon" onclick="deleteOrden('${o.id}')">🗑</button>
+        </td>
+      </tr>`).join('')
+    : `<tr><td colspan="7" class="empty-state">📭 Sin ordenes</td></tr>`;
+}
+
+function loadVehiculosCliente() {
+  const clienteId = document.getElementById('orden-cliente').value;
+  const sel = document.getElementById('orden-vehiculo');
+  const vehs = DB.vehiculos().filter(v=>v.clienteId===clienteId);
+  sel.innerHTML = vehs.length
+    ? vehs.map(v=>`<option value="${v.id}">${v.placa} ${v.marca} ${v.modelo}</option>`).join('')
+    : '<option value="">Sin vehiculos</option>';
+}
+
+function editOrden(id) {
+  const o = DB.ordenes().find(o=>o.id===id);
+  if (!o) return;
+  document.getElementById('orden-id').value = o.id;
+  document.getElementById('orden-descripcion').value = o.descripcion||'';
+  document.getElementById('orden-notas').value = o.notas||'';
+  document.getElementById('orden-mano-obra').value = o.manoObra||'';
+  document.getElementById('orden-refacciones').value = o.refacciones||'';
+  document.getElementById('orden-estado').value = o.estado;
+  document.getElementById('orden-prioridad').value = o.prioridad;
+  populateClienteSelect('orden-cliente', o.clienteId);
+  setTimeout(()=>{
+    loadVehiculosCliente();
+    setTimeout(()=>{ document.getElementById('orden-vehiculo').value = o.vehiculoId; }, 0);
+  }, 0);
+  openModal('modal-orden');
+}
+
+function saveOrden() {
+  const clienteId = document.getElementById('orden-cliente').value;
+  const vehiculoId = document.getElementById('orden-vehiculo').value;
+  const descripcion = document.getElementById('orden-descripcion').value.trim();
+  if (!clienteId||!vehiculoId||!descripcion) { toast('Campos requeridos.','danger'); return; }
+
+  const id = document.getElementById('orden-id').value;
+  let rows = DB.ordenes();
+  const obj = {
+    id: id||DB.uid(), clienteId, vehiculoId, descripcion,
+    estado: document.getElementById('orden-estado').value,
+    prioridad: document.getElementById('orden-prioridad').value,
+    manoObra: +document.getElementById('orden-mano-obra').value||0,
+    refacciones: +document.getElementById('orden-refacciones').value||0,
+    notas: document.getElementById('orden-notas').value.trim(),
+    creadoEn: id ? (rows.find(o=>o.id===id)?.creadoEn||new Date().toISOString()) : new Date().toISOString(),
+  };
+  if (id) rows = rows.map(o=>o.id===id?obj:o);
+  else rows.push(obj);
+  DB.saveOrdenes(rows);
+  closeModal('modal-orden');
+  renderOrdenes();
+  toast(id?'Orden actualizada.':'Orden creada.');
+}
+
+function deleteOrden(id) {
+  if (!confirm('¿Eliminar orden?')) return;
+  DB.saveOrdenes(DB.ordenes().filter(o=>o.id!==id));
+  renderOrdenes();
+  toast('Orden eliminada.','info');
+}
+
+/* ─── INVENTARIO ────────────────────────────────────────────── */
+let invFilter = 'all';
+function setInvFilter(f) {
+  invFilter = f;
+  document.querySelectorAll('[data-inv]').forEach(el=>el.classList.toggle('active', el.dataset.inv===f));
+  renderInventario();
+}
+
+function renderInventario() {
+  const q = (document.getElementById('search-inventario')?.value||'').toLowerCase();
+  let rows = DB.parts();
+  if (invFilter==='low') rows = rows.filter(p=>+p.stock<=+p.min);
+  if (q) rows = rows.filter(p=>p.nombre.toLowerCase().includes(q)||p.sku.toLowerCase().includes(q));
+
+  document.getElementById('tbody-inventario').innerHTML = rows.length
+    ? rows.map(p=>{
+        const low = +p.stock <= +p.min;
+        return `<tr>
+          <td><code>${p.sku}</code></td>
+          <td>${p.nombre}</td>
+          <td class="${low?'stock-low':'stock-ok'}">${p.stock} ${low?'⚠':'✓'}</td>
+          <td>${p.min}</td>
+          <td>${fmt(p.costo)}</td>
+          <td>${fmt(p.venta)}</td>
+          <td>
+            <button class="btn btn-outline btn-sm btn-icon" onclick="editPart('${p.id}')">✎</button>
+            <button class="btn btn-danger btn-sm btn-icon" onclick="deletePart('${p.id}')">🗑</button>
+          </td>
+        </tr>`;
+      }).join('')
+    : `<tr><td colspan="7" class="empty-state">📭 Sin refacciones</td></tr>`;
+}
+
+function editPart(id) {
+  const p = DB.parts().find(p=>p.id===id);
+  if (!p) return;
+  document.getElementById('part-id').value = p.id;
+  document.getElementById('part-sku').value = p.sku;
+  document.getElementById('part-nombre').value = p.nombre;
+  document.getElementById('part-categoria').value = p.categoria;
+  document.getElementById('part-unit').value = p.unit||'Pieza';
+  document.getElementById('part-costo').value = p.costo;
+  document.getElementById('part-venta').value = p.venta;
+  document.getElementById('part-stock').value = p.stock;
+  document.getElementById('part-min').value = p.min;
+  openModal('modal-part');
+}
+
+function savePart() {
+  const sku = document.getElementById('part-sku').value.trim().toUpperCase();
+  const nombre = document.getElementById('part-nombre').value.trim();
+  const costo = +document.getElementById('part-costo').value;
+  const venta = +document.getElementById('part-venta').value;
+  if (!sku||!nombre||!costo||!venta) { toast('Campos requeridos.','danger'); return; }
+
+  const id = document.getElementById('part-id').value;
+  let rows = DB.parts();
+  const obj = {
+    id: id||DB.uid(), sku, nombre, costo, venta,
+    categoria: document.getElementById('part-categoria').value,
+    unit: document.getElementById('part-unit').value,
+    stock: +document.getElementById('part-stock').value||0,
+    min: +document.getElementById('part-min').value||0,
+  };
+  if (id) rows = rows.map(p=>p.id===id?obj:p);
+  else rows.push(obj);
+  DB.saveParts(rows);
+  closeModal('modal-part');
+  renderInventario();
+  toast(id?'Refaccion actualizada.':'Refaccion registrada.');
+}
+
+function deletePart(id) {
+  if (!confirm('¿Eliminar refaccion?')) return;
+  DB.saveParts(DB.parts().filter(p=>p.id!==id));
+  renderInventario();
+  toast('Refaccion eliminada.','info');
+}
+
+/* ─── DVI ───────────────────────────────────────────────────── */
+const DVI_AREAS = ['Frenos', 'Suspension', 'Motor', 'Carroceria', 'Llantas', 'Luces', 'Interior', 'Escape'];
+
+function renderDVI() {
+  const sel = document.getElementById('dvi-orden-select');
+  const ordenes = DB.ordenes();
+  sel.innerHTML = '<option value="">-- Seleccionar Orden --</option>' +
+    ordenes.map(o=>`<option value="${o.id}">${getVehiculoLabel(o.vehiculoId)} (${getClienteName(o.clienteId)})</option>`).join('');
+}
+
+function loadDVIForOrden() {
+  const ordenId = document.getElementById('dvi-orden-select').value;
+  if (!ordenId) { document.getElementById('dvi-content').style.display = 'none'; return; }
+  document.getElementById('dvi-content').style.display = 'block';
+
+  document.getElementById('dvi-areas').innerHTML = DVI_AREAS.map(area=>`
+    <div class="dvi-area-item" onclick="selectDVIArea('${area}')">
+      ${area}
+    </div>`).join('');
+}
+
+function selectDVIArea(area) {
+  document.querySelectorAll('.dvi-area-item').forEach(el=>el.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+  document.getElementById('dvi-area-title').textContent = area;
+  document.getElementById('dvi-condition').value = 'ok';
+  document.getElementById('dvi-notes').value = '';
+  document.getElementById('dvi-photos').innerHTML = '';
+  document.getElementById('dvi-photo-input').value = '';
+  document.querySelector('.dvi-area-item.selected').__area = area;
+}
+
+function addPhotos() {
+  const input = document.getElementById('dvi-photo-input');
+  const grid = document.getElementById('dvi-photos');
+  Array.from(input.files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const div = document.createElement('div');
+      div.className = 'photo-thumb';
+      div.innerHTML = `
+        <img src="${e.target.result}">
+        <button class="photo-remove" onclick="this.parentElement.remove()">✕</button>`;
+      grid.appendChild(div);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function saveDVIArea() {
+  const ordenId = document.getElementById('dvi-orden-select').value;
+  const area = document.querySelector('.dvi-area-item.selected')?.__area;
+  if (!ordenId||!area) { toast('Selecciona orden y area.','danger'); return; }
+  toast('DVI guardado exitosamente.');
+}
+
+/* ─── REPORTES ──────────────────────────────────────────────── */
+function renderReportes() {
+  const ordenes = DB.ordenes();
+  const hoy = new Date().toISOString().slice(0,10);
+  const semanaPasada = new Date(Date.now()-7*24*3600000).toISOString().slice(0,10);
+  const mesActual = new Date().toISOString().slice(0,7);
+
+  const ordHoy = ordenes.filter(o=>o.creadoEn?.startsWith(hoy));
+  const ordSemana = ordenes.filter(o=>o.creadoEn?.slice(0,10)>=semanaPasada);
+  const ordMes = ordenes.filter(o=>o.creadoEn?.startsWith(mesActual));
+
+  const totalHoy = ordHoy.reduce((s,o)=>s+(+o.manoObra||0)+(+o.refacciones||0),0);
+  const totalSemana = ordSemana.reduce((s,o)=>s+(+o.manoObra||0)+(+o.refacciones||0),0);
+  const totalMes = ordMes.reduce((s,o)=>s+(+o.manoObra||0)+(+o.refacciones||0),0);
+
+  const laborMes = ordMes.reduce((s,o)=>s+(+o.manoObra||0),0);
+  const partsMes = ordMes.reduce((s,o)=>s+(+o.refacciones||0),0);
+
+  document.getElementById('report-today').textContent = fmt(totalHoy);
+  document.getElementById('report-today-orders').textContent = ordHoy.length + ' orden(es)';
+  document.getElementById('report-week').textContent = fmt(totalSemana);
+  document.getElementById('report-week-orders').textContent = ordSemana.length + ' orden(es)';
+  document.getElementById('report-month').textContent = fmt(totalMes);
+  document.getElementById('report-month-orders').textContent = ordMes.length + ' orden(es)';
+  document.getElementById('report-labor-month').textContent = fmt(laborMes);
+  document.getElementById('report-parts-month').textContent = fmt(partsMes);
+}
+
+/* ─── EXPORT ────────────────────────────────────────────────── */
+const EXPORT_DEFS = {
+  clientes: {
+    title: 'Clientes',
+    getData: () => DB.clientes().map(c=>({
+      'Nombre': c.nombre, 'Telefono': c.telefono, 'Email': c.email||''
+    })),
+  },
+  vehiculos: {
+    title: 'Vehiculos',
+    getData: () => DB.vehiculos().map(v=>({
+      'Placa': v.placa, 'Marca': v.marca, 'Modelo': v.modelo,
+      'Anio': v.anio||'', 'Color': v.color||'', 'Km': v.km||0,
+      'Cliente': getClienteName(v.clienteId)
+    })),
+  },
+  ordenes: {
+    title: 'Ordenes',
+    getData: () => DB.ordenes().map(o=>({
+      'Cliente': getClienteName(o.clienteId),
+      'Vehiculo': getVehiculoLabel(o.vehiculoId),
+      'Descripcion': o.descripcion,
+      'Estado': o.estado,
+      'Mano Obra': fmt(o.manoObra||0),
+      'Refacciones': fmt(o.refacciones||0),
+      'Total': fmt((+o.manoObra||0)+(+o.refacciones||0)),
+      'Fecha': fmtDate(o.creadoEn)
+    })),
+  },
+  inventario: {
+    title: 'Inventario',
+    getData: () => DB.parts().map(p=>({
+      'SKU': p.sku, 'Refaccion': p.nombre, 'Categoria': p.categoria,
+      'Stock': p.stock, 'Min': p.min,
+      'Costo': fmt(p.costo), 'Venta': fmt(p.venta)
+    })),
+  },
+};
+
+function exportCSV(key) {
+  const def = EXPORT_DEFS[key];
+  const rows = def.getData();
+  if (!rows.length) { toast('Sin datos.','info'); return; }
+  const headers = Object.keys(rows[0]);
+  const csvLines = [
+    headers.join(','),
+    ...rows.map(r => headers.map(h => {
+      let val = String(r[h]||'').replace(/"/g,'""');
+      return val.includes(',') || val.includes('"') || val.includes('\n') ? `"${val}"` : val;
+    }).join(','))
+  ];
+  const blob = new Blob(['\uFEFF' + csvLines.join('\r\n')], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${def.title}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast(`${def.title} exportado.`);
+}
+
+function exportXLSX(key) {
+  if (typeof XLSX === 'undefined') { toast('Error XLSX.','danger'); return; }
+  const def = EXPORT_DEFS[key];
+  const rows = def.getData();
+  if (!rows.length) { toast('Sin datos.','info'); return; }
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, def.title);
+  XLSX.writeFile(wb, `${def.title}_${new Date().toISOString().slice(0,10)}.xlsx`);
+  toast(`${def.title} exportado.`);
+}
+
+function exportAll() {
+  if (typeof XLSX === 'undefined') { toast('Error XLSX.','danger'); return; }
+  const wb = XLSX.utils.book_new();
+  let empty = true;
+  Object.entries(EXPORT_DEFS).forEach(([key, def]) => {
+    const rows = def.getData();
+    if (rows.length) {
+      const ws = XLSX.utils.json_to_sheet(rows);
+      XLSX.utils.book_append_sheet(wb, ws, def.title);
+      empty = false;
+    }
+  });
+  if (empty) { toast('Sin datos.','info'); return; }
+  XLSX.writeFile(wb, `MuellesLaFlecha_${new Date().toISOString().slice(0,10)}.xlsx`);
+  toast('Reporte completo exportado.');
+}
+
+/* ─── INIT ──────────────────────────────────────────────────── */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-backdrop.open').forEach(m=>m.classList.remove('open'));
+    closeSidebar();
+  }
+});
+
+document.querySelector('#page-clientes .btn-primary').onclick = () => {
+  document.getElementById('cliente-id').value = '';
+  ['cliente-nombre','cliente-telefono','cliente-email'].forEach(id=>document.getElementById(id).value='');
+  openModal('modal-cliente');
+};
+
+document.querySelector('#page-vehiculos .btn-primary').onclick = () => {
+  document.getElementById('vehiculo-id').value = '';
+  ['vehiculo-placa','vehiculo-marca','vehiculo-modelo','vehiculo-color','vehiculo-anio','vehiculo-km'].forEach(id=>document.getElementById(id).value='');
+  populateClienteSelect('vehiculo-cliente','');
+  openModal('modal-vehiculo');
+};
+
+document.querySelector('#page-ordenes .btn-primary').onclick = () => {
+  document.getElementById('orden-id').value = '';
+  ['orden-descripcion','orden-notas','orden-mano-obra','orden-refacciones'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('orden-estado').value = 'recibido';
+  document.getElementById('orden-prioridad').value = 'normal';
+  populateClienteSelect('orden-cliente','');
+  loadVehiculosCliente();
+  openModal('modal-orden');
+};
+
+document.querySelector('#page-inventario .btn-primary').onclick = () => {
+  document.getElementById('part-id').value = '';
+  ['part-sku','part-nombre','part-costo','part-venta','part-stock','part-min'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('part-categoria').value = 'Mofles';
+  document.getElementById('part-unit').value = 'Pieza';
+  openModal('modal-part');
+};
+
+renderDashboard();
+</script>
+</body>
+</html>
