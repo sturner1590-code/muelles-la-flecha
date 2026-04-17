@@ -1085,8 +1085,8 @@ function populateClienteSelect(selectId, selectedId) {
   if (!input || !datalist) return;
 
   const clientes = DB.clientes();
-  datalist.innerHTML = `<option value="NA" label="N/A"></option>` +
-    clientes.map(c => `<option value="${c.id}" label="${c.nombre}"></option>`).join('');
+  datalist.innerHTML = `<option value="N/A"></option>` +
+    clientes.map(c => `<option value="${c.nombre}"></option>`).join('');
 
   // Si hay un selectedId, intentar encontrar el nombre para mostrar en el input
   if (selectedId && selectedId !== 'NA') {
@@ -1201,15 +1201,13 @@ function selectClienteFromDatalist() {
   const currentValue = input.value.trim();
   const clientes = DB.clientes();
 
-  // Buscar si el valor es un ID de cliente
-  const cliente = clientes.find(c => c.id === currentValue);
+  // Buscar si el valor es un nombre de cliente (ahora value=nombre)
+  const cliente = clientes.find(c => c.nombre === currentValue || c.id === currentValue);
 
   if (cliente) {
-    // Si encontramos un cliente por ID, mostrar solo el nombre en el input
     input.value = cliente.nombre;
     input.dataset.clienteId = cliente.id;
   } else {
-    // Si no es un ID, guardar lo que escribió para searchear después
     input.dataset.clienteId = currentValue;
   }
 
@@ -1221,16 +1219,17 @@ function selectVehiculoFromDatalist() {
   const currentValue = input.value.trim();
   const vehiculos = DB.vehiculos();
 
-  // Buscar si el valor es un ID de vehículo
-  const vehiculo = vehiculos.find(v => v.id === currentValue);
+  // Buscar vehículo por displayText o ID
+  let vehiculo = vehiculos.find(v => {
+    const displayText = `${v.placa || v.vin || v.marca} ${v.modelo}`;
+    return displayText === currentValue || v.id === currentValue;
+  });
 
   if (vehiculo) {
-    // Si encontramos un vehículo por ID, mostrar datos legibles en el input
     const displayText = `${vehiculo.placa || vehiculo.vin || vehiculo.marca} ${vehiculo.modelo}`;
     input.value = displayText;
     input.dataset.vehiculoId = vehiculo.id;
   } else {
-    // Si no es un ID, guardar lo que escribió
     input.dataset.vehiculoId = currentValue;
   }
 }
@@ -1258,7 +1257,10 @@ function loadVehiculosCliente() {
 
   const vehs = DB.vehiculos().filter(v => v.clienteId === clienteId);
   datalist.innerHTML = vehs.length
-    ? vehs.map(v => `<option value="${v.id}" label="${v.placa || v.vin || v.marca} ${v.modelo}"></option>`).join('')
+    ? vehs.map(v => {
+        const displayText = `${v.placa || v.vin || v.marca} ${v.modelo}`;
+        return `<option value="${displayText}"></option>`;
+      }).join('')
     : '';
 
   input.value = ''; // Limpiar el input de vehículo cuando cambia el cliente
@@ -1456,7 +1458,7 @@ function filterRefacciones(idx, datalistId) {
 
   // Actualizar datalist con las opciones filtradas
   datalist.innerHTML = filtered
-    .map(r => `<option value="${r.id}" label="${r.nombre} (${r.sku})"></option>`)
+    .map(r => `<option value="${r.nombre}"></option>`)
     .join('');
 }
 
@@ -1465,20 +1467,17 @@ function selectRefaccionFromDatalist(idx) {
   const currentValue = input.value.trim();
   const refacciones = DB.refacciones();
 
-  // Buscar si el valor es un ID de refacción
-  const refaccion = refacciones.find(r => r.id === currentValue);
+  // Buscar refacción por nombre o ID
+  const refaccion = refacciones.find(r => r.nombre === currentValue || r.id === currentValue);
 
   if (refaccion) {
-    // Si encontramos una refacción por ID, mostrar solo el nombre en el input
     input.value = refaccion.nombre;
     input.dataset.refaccionId = refaccion.id;
+    updateRefaccionLine(idx, 'partId', refaccion.id);
   } else {
-    // Si no es un ID, guardar lo que escribió para búsqueda después
     input.dataset.refaccionId = currentValue;
+    updateRefaccionLine(idx, 'partId', currentValue);
   }
-
-  // Ahora actualizar la línea con el ID de la refacción
-  updateRefaccionLine(idx, 'partId', refaccion ? refaccion.id : currentValue);
 }
 
 /* ═══════════════════════════════════════════════════════════════ INLINE CLIENTE/VEHICULO */
