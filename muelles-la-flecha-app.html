@@ -1201,8 +1201,12 @@ function selectClienteFromDatalist() {
   const currentValue = input.value.trim();
   const clientes = DB.clientes();
 
-  // Buscar si el valor es un nombre de cliente (ahora value=nombre)
-  const cliente = clientes.find(c => c.nombre === currentValue || c.id === currentValue);
+  // Buscar cliente por nombre (case-insensitive) o ID
+  const cliente = clientes.find(c =>
+    c.nombre.toLowerCase() === currentValue.toLowerCase() ||
+    c.id === currentValue ||
+    c.nombre.toLowerCase().includes(currentValue.toLowerCase())
+  );
 
   if (cliente) {
     input.value = cliente.nombre;
@@ -1219,10 +1223,12 @@ function selectVehiculoFromDatalist() {
   const currentValue = input.value.trim();
   const vehiculos = DB.vehiculos();
 
-  // Buscar vehículo por displayText o ID
+  // Buscar vehículo por displayText (case-insensitive) o ID
   let vehiculo = vehiculos.find(v => {
     const displayText = `${v.placa || v.vin || v.marca} ${v.modelo}`;
-    return displayText === currentValue || v.id === currentValue;
+    return displayText.toLowerCase() === currentValue.toLowerCase() ||
+           v.id === currentValue ||
+           displayText.toLowerCase().includes(currentValue.toLowerCase());
   });
 
   if (vehiculo) {
@@ -1466,8 +1472,12 @@ function selectRefaccionFromDatalist(idx) {
   const currentValue = input.value.trim();
   const refacciones = DB.refacciones();
 
-  // Buscar refacción por nombre o ID
-  const refaccion = refacciones.find(r => r.nombre === currentValue || r.id === currentValue);
+  // Buscar refacción por nombre (case-insensitive) o ID
+  const refaccion = refacciones.find(r =>
+    r.nombre.toLowerCase() === currentValue.toLowerCase() ||
+    r.id === currentValue ||
+    r.nombre.toLowerCase().includes(currentValue.toLowerCase())
+  );
 
   if (refaccion) {
     input.value = refaccion.nombre;
@@ -1475,7 +1485,6 @@ function selectRefaccionFromDatalist(idx) {
     updateRefaccionLine(idx, 'partId', refaccion.id);
   } else {
     input.dataset.refaccionId = currentValue;
-    updateRefaccionLine(idx, 'partId', currentValue);
   }
 }
 
