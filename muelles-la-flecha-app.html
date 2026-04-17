@@ -376,7 +376,8 @@
       <input type="hidden" id="vehiculo-id">
       <div class="form-group">
         <label>Cliente Propietario *</label>
-        <select class="form-control" id="vehiculo-cliente"></select>
+        <input type="text" class="form-control" id="vehiculo-cliente" list="vehiculo-cliente-list" placeholder="Buscar cliente...">
+        <datalist id="vehiculo-cliente-list"></datalist>
       </div>
       <div class="form-row">
         <div class="form-group">
@@ -441,14 +442,20 @@
         <div class="form-group">
           <label>Cliente</label>
           <div style="display:flex;gap:6px">
-            <select class="form-control" id="orden-cliente" onchange="loadVehiculosCliente()" style="flex:1"></select>
+            <div style="flex:1">
+              <input type="text" class="form-control" id="orden-cliente" list="orden-cliente-list" onchange="loadVehiculosCliente()" placeholder="Buscar cliente...">
+              <datalist id="orden-cliente-list"></datalist>
+            </div>
             <button class="btn btn-primary btn-sm" onclick="openInlineClienteForm()">+ Nuevo</button>
           </div>
         </div>
         <div class="form-group">
           <label>Vehiculo</label>
           <div style="display:flex;gap:6px">
-            <select class="form-control" id="orden-vehiculo" style="flex:1"></select>
+            <div style="flex:1">
+              <input type="text" class="form-control" id="orden-vehiculo" list="orden-vehiculo-list" placeholder="Buscar vehículo...">
+              <datalist id="orden-vehiculo-list"></datalist>
+            </div>
             <button class="btn btn-primary btn-sm" onclick="openInlineVehiculoForm()">+ Nuevo</button>
           </div>
         </div>
@@ -583,7 +590,8 @@
     <div class="modal-body">
       <div class="form-group">
         <label>Cliente asociado</label>
-        <select class="form-control" id="inline-vehiculo-cliente"></select>
+        <input type="text" class="form-control" id="inline-vehiculo-cliente" list="inline-vehiculo-cliente-list" placeholder="Buscar cliente...">
+        <datalist id="inline-vehiculo-cliente-list"></datalist>
       </div>
       <div class="form-row">
         <div class="form-group">
@@ -847,6 +855,14 @@ function closeSidebar() { document.getElementById('sidebar').classList.remove('o
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
+function populateDatalist(dataListId, data, displayField, valueField = 'id') {
+  const datalist = document.getElementById(dataListId);
+  if (!datalist) return;
+  datalist.innerHTML = data
+    .map(item => `<option value="${item[valueField]}">${item[displayField]}</option>`)
+    .join('');
+}
+
 document.querySelectorAll('.modal-backdrop').forEach(m => {
   m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
 });
@@ -1059,9 +1075,33 @@ function openNewVehiculoModal() {
 }
 
 function populateClienteSelect(selectId, selectedId) {
-  const sel = document.getElementById(selectId);
-  sel.innerHTML = '<option value="NA">N/A</option>' +
-    DB.clientes().map(c=>`<option value="${c.id}"${c.id===selectedId?' selected':''}>${c.nombre}</option>`).join('');
+  // Determinar cuál datalist actualizar basado en el input
+  const inputId = selectId; // e.g., 'vehiculo-cliente' -> datalist 'vehiculo-cliente-list'
+  const dataListId = inputId + '-list';
+
+  const input = document.getElementById(inputId);
+  const datalist = document.getElementById(dataListId);
+
+  if (!input || !datalist) return;
+
+  const clientes = DB.clientes();
+  datalist.innerHTML = `<option value="NA" label="N/A"></option>` +
+    clientes.map(c => `<option value="${c.id}" label="${c.nombre}"></option>`).join('');
+
+  // Si hay un selectedId, intentar encontrar el nombre para mostrar en el input
+  if (selectedId && selectedId !== 'NA') {
+    const selected = clientes.find(c => c.id === selectedId);
+    if (selected) {
+      input.value = selected.nombre;
+      input.dataset.clienteId = selected.id; // Guardar el ID en un atributo data
+    }
+  } else if (selectedId === 'NA') {
+    input.value = 'N/A';
+    input.dataset.clienteId = 'NA';
+  } else {
+    input.value = '';
+    input.dataset.clienteId = '';
+  }
 }
 
 function editVehiculo(id) {
@@ -1157,12 +1197,32 @@ function openNewOrdenModal() {
 }
 
 function loadVehiculosCliente() {
-  const clienteId = document.getElementById('orden-cliente').value;
-  const sel = document.getElementById('orden-vehiculo');
-  const vehs = DB.vehiculos().filter(v=>v.clienteId===clienteId);
-  sel.innerHTML = vehs.length
-    ? vehs.map(v=>`<option value="${v.id}">${v.placa||v.vin||v.marca} ${v.modelo}</option>`).join('')
-    : '<option value="">Sin vehiculos</option>';
+  const clienteIdInput = document.getElementById('orden-cliente');
+  // El value del input será el nombre (lo que escribe el usuario) o el ID (si seleccionó del datalist)
+  // Intentar obtener el ID del atributo data o del dataset
+  let clienteId = clienteIdInput.dataset.clienteId || clienteIdInput.value;
+
+  // Si no está en dataset, buscar por nombre
+  if (!clienteId || clienteId === clienteIdInput.value) {
+    const cliente = DB.clientes().find(c => c.nombre === clienteIdInput.value || c.id === clienteIdInput.value);
+    clienteId = cliente ? cliente.id : '';
+  }
+
+  const datalist = document.getElementById('orden-vehiculo-list');
+  const input = document.getElementById('orden-vehiculo');
+
+  if (!clienteId) {
+    datalist.innerHTML = '';
+    input.value = '';
+    return;
+  }
+
+  const vehs = DB.vehiculos().filter(v => v.clienteId === clienteId);
+  datalist.innerHTML = vehs.length
+    ? vehs.map(v => `<option value="${v.id}" label="${v.placa || v.vin || v.marca} ${v.modelo}"></option>`).join('')
+    : '';
+
+  input.value = ''; // Limpiar el input de vehículo cuando cambia el cliente
 }
 
 function editOrden(id) {
@@ -1303,19 +1363,19 @@ function updateRefaccionLine(idx, field, value) {
 
 function renderRefaccionesTable() {
   const refacciones = DB.refacciones();
-  const refSelect = refacciones.length > 0
-    ? refacciones.map(r=>`<option value="${r.id}">${r.nombre} (${r.sku})</option>`).join('')
-    : '<option value="">Sin refacciones importadas</option>';
 
   let html = '';
   currentOrdenLineas.forEach((linea, idx) => {
-    const selected = refacciones.find(r=>r.id===linea.partId);
-    const refOptions = selected
-      ? `<option value="${selected.id}" selected>${selected.nombre} (${selected.sku})</option>${refSelect}`
-      : refSelect;
+    const dataListId = `ref-list-${idx}`;
+    const refaccionesOptions = refacciones.length > 0
+      ? refacciones.map(r => `<option value="${r.id}" label="${r.nombre} (${r.sku})"></option>`).join('')
+      : '';
 
     html += `<tr>
-      <td><select class="form-control" onchange="updateRefaccionLine(${idx},'partId',this.value)" style="font-size:12px">${refOptions}</select></td>
+      <td>
+        <input type="text" class="form-control" list="${dataListId}" onchange="updateRefaccionLine(${idx},'partId',this.value)" placeholder="Buscar refacción..." style="font-size:12px">
+        <datalist id="${dataListId}">${refaccionesOptions}</datalist>
+      </td>
       <td><input type="number" class="form-control" value="${linea.cantidad}" onchange="updateRefaccionLine(${idx},'cantidad',this.value)" min="1" style="font-size:12px"></td>
       <td><input type="number" class="form-control" value="${linea.precioUnitario}" onchange="updateRefaccionLine(${idx},'precioUnitario',this.value)" step="0.01" style="font-size:12px"></td>
       <td><strong>${fmt(linea.subtotal)}</strong></td>
