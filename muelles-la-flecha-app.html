@@ -1391,7 +1391,7 @@ function renderRefaccionesTable() {
 
     html += `<tr>
       <td>
-        <input type="text" class="form-control ref-autocomplete" id="${inputId}" list="${dataListId}" onchange="updateRefaccionLine(${idx},'partId',this.value)" oninput="filterRefacciones(${idx},'${dataListId}')" placeholder="Buscar refacción..." style="font-size:12px">
+        <input type="text" class="form-control ref-autocomplete" id="${inputId}" list="${dataListId}" onchange="selectRefaccionFromDatalist(${idx})" oninput="filterRefacciones(${idx},'${dataListId}')" placeholder="Buscar refacción..." style="font-size:12px">
         <datalist id="${dataListId}"></datalist>
       </td>
       <td><input type="number" class="form-control" value="${linea.cantidad}" onchange="updateRefaccionLine(${idx},'cantidad',this.value)" min="1" style="font-size:12px"></td>
@@ -1438,6 +1438,27 @@ function filterRefacciones(idx, datalistId) {
   datalist.innerHTML = filtered
     .map(r => `<option value="${r.id}" label="${r.nombre} (${r.sku})"></option>`)
     .join('');
+}
+
+function selectRefaccionFromDatalist(idx) {
+  const input = document.getElementById(`ref-input-${idx}`);
+  const currentValue = input.value.trim();
+  const refacciones = DB.refacciones();
+
+  // Buscar si el valor es un ID de refacción
+  const refaccion = refacciones.find(r => r.id === currentValue);
+
+  if (refaccion) {
+    // Si encontramos una refacción por ID, mostrar solo el nombre en el input
+    input.value = refaccion.nombre;
+    input.dataset.refaccionId = refaccion.id;
+  } else {
+    // Si no es un ID, guardar lo que escribió para búsqueda después
+    input.dataset.refaccionId = currentValue;
+  }
+
+  // Ahora actualizar la línea con el ID de la refacción
+  updateRefaccionLine(idx, 'partId', refaccion ? refaccion.id : currentValue);
 }
 
 /* ═══════════════════════════════════════════════════════════════ INLINE CLIENTE/VEHICULO */
