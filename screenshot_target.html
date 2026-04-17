@@ -1,0 +1,124 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/><meta name="viewport" content="width=1280"/><title>capture</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#ffffff;--bg-alt:#f5f3ff;--primary:#4f46e5;--primary-bg:#ede9fe;--text:#111827;--muted:#6b7280;--border:#e5e7eb}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff;color:#111827;width:1280px}
+nav{display:flex;justify-content:space-between;align-items:center;padding:.85rem 3rem;background:#fff;border-bottom:1px solid #e5e7eb}
+.logo{font-size:1.2rem;font-weight:800;color:#111827;text-decoration:none}
+.logo span{color:#4f46e5}
+.nav-links{display:flex;gap:2rem;list-style:none}
+.nav-links a{color:#6b7280;text-decoration:none;font-size:.9rem}
+.btn-nav{background:#4f46e5;color:#fff;padding:.55rem 1.4rem;border-radius:999px;text-decoration:none;font-size:.88rem;font-weight:600}
+.hero{display:flex;align-items:center;padding:5rem 3rem 4rem;gap:3rem;max-width:1200px;margin:0 auto}
+.hero-text{flex:1}
+.hero-text h1{font-size:3.4rem;font-weight:900;line-height:1.1;margin-bottom:1.2rem;letter-spacing:-1px}
+.hero-text h1 span{color:#4f46e5}
+.hero-bullets{list-style:none;margin-bottom:2rem}
+.hero-bullets li{color:#6b7280;font-size:1rem;margin-bottom:.4rem;display:flex;align-items:center;gap:.5rem}
+.hero-bullets li::before{content:"✓";color:#4f46e5;font-weight:700}
+.hero-cta-row{display:flex;align-items:center;gap:1rem;margin-bottom:2rem}
+.btn-primary{background:#4f46e5;color:#fff;padding:.85rem 2rem;border-radius:999px;text-decoration:none;font-weight:700;font-size:1rem}
+.btn-outline{border:2px solid #e5e7eb;color:#111827;padding:.8rem 1.8rem;border-radius:999px;text-decoration:none;font-weight:600;font-size:.95rem}
+.hero-rating{display:flex;align-items:center;gap:.6rem;font-size:.85rem;color:#6b7280}
+.stars{color:#f59e0b}
+.hero-image{flex:1;display:flex;justify-content:center}
+.hero-image img{width:100%;max-width:520px;border-radius:20px;object-fit:cover;box-shadow:0 20px 60px rgba(79,70,229,.15)}
+.brands-strip{background:#f5f3ff;padding:2.5rem 3rem;text-align:center;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb}
+.brands-strip p{font-size:.8rem;text-transform:uppercase;letter-spacing:1.5px;color:#4f46e5;font-weight:600;margin-bottom:1.2rem}
+.brand-logos{display:flex;justify-content:center;align-items:center;gap:2.5rem;flex-wrap:wrap}
+.brand-logo{font-size:.95rem;font-weight:700;color:#6b7280;opacity:.7}
+.why{padding:5rem 3rem;max-width:1100px;margin:0 auto;text-align:center}
+.section-label{font-size:.75rem;text-transform:uppercase;letter-spacing:2px;color:#4f46e5;font-weight:700;margin-bottom:.6rem}
+.section-h2{font-size:2.4rem;font-weight:800;line-height:1.2;margin-bottom:3rem;letter-spacing:-.5px}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem}
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:2rem 1.75rem;text-align:left;box-shadow:0 4px 24px rgba(79,70,229,.08)}
+.card-icon-wrap{width:52px;height:52px;background:#ede9fe;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:1.2rem}
+.card h3{font-size:1.05rem;font-weight:700;margin-bottom:.5rem}
+.card p{font-size:.88rem;color:#6b7280;line-height:1.7}
+.banner-cta{background:linear-gradient(135deg,#4f46e5,#6366f1);padding:5rem 3rem;text-align:center;color:#fff}
+.banner-cta h2{font-size:2.8rem;font-weight:900;line-height:1.2;margin-bottom:1rem;letter-spacing:-.5px}
+.banner-cta h2 em{font-style:normal;text-decoration:underline;text-underline-offset:6px;text-decoration-color:rgba(255,255,255,.5)}
+.banner-cta p{font-size:1.05rem;opacity:.85;margin-bottom:2rem}
+.btn-white{background:#fff;color:#4f46e5;padding:.9rem 2.2rem;border-radius:999px;text-decoration:none;font-weight:700;font-size:1rem;display:inline-block}
+.how{padding:5rem 3rem;max-width:1100px;margin:0 auto;text-align:center}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:2rem;margin-top:3rem}
+.step{text-align:left}
+.step-img-wrap{width:100%;height:200px;border-radius:14px;overflow:hidden;margin-bottom:1.2rem}
+.step-img-wrap img{width:100%;height:100%;object-fit:cover}
+.step-num{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;background:#4f46e5;color:#fff;border-radius:50%;font-size:.8rem;font-weight:700;margin-bottom:.7rem}
+.step h3{font-size:1.05rem;font-weight:700;margin-bottom:.4rem}
+.step p{font-size:.88rem;color:#6b7280;line-height:1.7}
+.divider{border:none;border-top:1px solid #e5e7eb;margin:0}
+.highlight{padding:5rem 3rem;max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:5rem}
+.highlight-left{flex:1}
+.highlight-left h2{font-size:2.8rem;font-weight:900;line-height:1.1;letter-spacing:-.5px;color:#4f46e5}
+.highlight-right{flex:1}
+.highlight-right p{font-size:1.05rem;color:#6b7280;line-height:1.8;margin-bottom:1.5rem}
+.highlight-right a{color:#4f46e5;font-weight:600;text-decoration:none}
+.testimonials{padding:5rem 3rem;background:#f5f3ff;text-align:center}
+.testimonials-inner{max-width:1100px;margin:0 auto}
+.testi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin-top:3rem}
+.testi-card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:1.75rem;text-align:left;box-shadow:0 4px 24px rgba(79,70,229,.08)}
+.testi-stars{color:#f59e0b;font-size:1.1rem;margin-bottom:.8rem}
+.testi-card p{font-size:.9rem;color:#6b7280;line-height:1.7;margin-bottom:1rem;font-style:italic}
+.testi-author{font-size:.85rem;font-weight:700;color:#111827}
+.testi-vehicle{font-size:.78rem;color:#6b7280}
+.cotizar-sec{padding:5rem 3rem}
+.cotizar-inner{max-width:1100px;margin:0 auto}
+.form-layout{display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:start}
+.form-intro p.sl{font-size:.75rem;text-transform:uppercase;letter-spacing:2px;color:#4f46e5;font-weight:700;margin-bottom:.5rem}
+.form-intro h2{font-size:2.2rem;font-weight:900;line-height:1.2;margin-bottom:1rem;letter-spacing:-.5px}
+.form-intro h2 span{color:#4f46e5}
+.form-intro > p{color:#6b7280;font-size:.95rem;line-height:1.7;margin-bottom:2rem}
+.form-perks{list-style:none;display:flex;flex-direction:column;gap:.7rem}
+.form-perks li{display:flex;align-items:center;gap:.7rem;font-size:.9rem}
+.perk-icon{width:32px;height:32px;background:#ede9fe;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+.form-box{background:#fff;border:1px solid #e5e7eb;border-radius:20px;padding:2.5rem;box-shadow:0 4px 24px rgba(79,70,229,.08)}
+.fst{font-size:.72rem;text-transform:uppercase;letter-spacing:1.5px;color:#4f46e5;font-weight:700;margin-bottom:1rem;margin-top:1.5rem}
+.fst:first-child{margin-top:0}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
+.form-group{margin-bottom:.8rem}
+label{display:block;font-size:.78rem;font-weight:600;color:#111827;margin-bottom:.3rem}
+input,select,textarea{width:100%;padding:.65rem .9rem;background:#fff;border:1.5px solid #e5e7eb;border-radius:9px;color:#111827;font-size:.9rem;font-family:inherit;outline:none}
+textarea{min-height:80px;resize:vertical}
+.fdiv{border:none;border-top:1px solid #e5e7eb;margin:1rem 0}
+.btn-submit{width:100%;background:#4f46e5;color:#fff;border:none;padding:.9rem;border-radius:999px;font-size:1rem;font-weight:700;cursor:pointer;margin-top:.5rem}
+footer{background:#111827;color:rgba(255,255,255,.6);padding:3rem}
+.footer-inner{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr 1fr;gap:3rem;margin-bottom:2.5rem}
+.logo-footer{font-size:1.1rem;font-weight:800;color:#fff;margin-bottom:.7rem}
+.logo-footer span{color:#818cf8}
+.footer-brand p{font-size:.85rem;line-height:1.7;max-width:260px}
+.footer-col h4{font-size:.8rem;text-transform:uppercase;letter-spacing:1.5px;color:#fff;font-weight:700;margin-bottom:1rem}
+.footer-col ul{list-style:none}
+.footer-col ul li{margin-bottom:.5rem}
+.footer-col ul li a{color:rgba(255,255,255,.5);text-decoration:none;font-size:.875rem}
+.footer-bottom{max-width:1100px;margin:0 auto;border-top:1px solid rgba(255,255,255,.1);padding-top:1.5rem;display:flex;justify-content:space-between;font-size:.8rem}
+</style></head><body>
+<nav><a href="#" class="logo">Autoglass<span>Tech</span></a><ul class="nav-links"><li><a href="#">Servicios</a></li><li><a href="#">Como funciona</a></li><li><a href="#">Opiniones</a></li></ul><a href="#" class="btn-nav">Cotizar gratis</a></nav>
+<section class="hero">
+  <div class="hero-text">
+    <h1>Tu parabrisas<br/><span>reparado</span> o<br/>reemplazado.</h1>
+    <ul class="hero-bullets">
+      <li>Sin visitar el taller — vamos donde estas</li>
+      <li>Reparamos grietas y estrellas al momento</li>
+      <li>Reemplazo para todo tipo de vehiculo</li>
+    </ul>
+    <div class="hero-cta-row">
+      <a href="#" class="btn-primary">Solicitar cita gratuita</a>
+      <a href="#" class="btn-outline">Como funciona?</a>
+    </div>
+    <div class="hero-rating"><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span><span>+500 clientes satisfechos</span></div>
+  </div>
+  <div class="hero-image"><img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80" alt="Tecnico reparando parabrisas"/></div>
+</section>
+<div class="brands-strip"><p>Trabajamos con todas las marcas de vehiculos</p><div class="brand-logos"><span class="brand-logo">Toyota</span><span class="brand-logo">Chevrolet</span><span class="brand-logo">Ford</span><span class="brand-logo">Nissan</span><span class="brand-logo">Honda</span><span class="brand-logo">Volkswagen</span><span class="brand-logo">Kia</span><span class="brand-logo">Hyundai</span></div></div>
+<section class="why"><p class="section-label">Por que elegirnos</p><h2 class="section-h2">La forma mas facil de recuperar tu visibilidad</h2><div class="cards"><div class="card"><div class="card-icon-wrap">&#128295;</div><h3>Sin estres, sin esperas</h3><p>Nuestro equipo llega a tu domicilio, oficina o donde estes. Tu no mueves el auto.</p></div><div class="card"><div class="card-icon-wrap">&#129695;</div><h3>Reparacion invisible</h3><p>Sellado profesional de grietas y estrellas. El resultado es casi imperceptible.</p></div><div class="card"><div class="card-icon-wrap">&#128176;</div><h3>Cotizacion sin costo</h3><p>Diagnostico y presupuesto 100% gratuito antes de comprometer cualquier trabajo.</p></div></div></section>
+<section class="banner-cta"><h2>Sigues manejando con<br/>una grieta <em>en tu parabrisas</em>?</h2><p>Cada dia que pasa, el dano crece. Una reparacion hoy cuesta mucho menos que un reemplazo manana.</p><a href="#" class="btn-white">Cotizar ahora — es gratis</a></section>
+<section class="how"><p class="section-label">Como funciona</p><h2 class="section-h2">Arreglarlo es tan facil como suena</h2><div class="steps"><div class="step"><div class="step-img-wrap"><img src="https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&q=80" alt="Formulario"/></div><span class="step-num">1</span><h3>Llena el formulario</h3><p>Cuentanos sobre tu vehiculo y el tipo de dano.</p></div><div class="step"><div class="step-img-wrap"><img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&q=80" alt="Agenda"/></div><span class="step-num">2</span><h3>Elige fecha y lugar</h3><p>Selecciona cuando y donde quieres que vayamos.</p></div><div class="step"><div class="step-img-wrap"><img src="https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?w=600&q=80" alt="Listo"/></div><span class="step-num">3</span><h3>Listo, a manejar</h3><p>Nuestro tecnico hace el trabajo en horas.</p></div></div></section>
+<hr class="divider"/>
+<section class="highlight"><div class="highlight-left"><h2>AutoglassTech hace el cambio de parabrisas un proceso simple</h2></div><div class="highlight-right"><p>Olvídate de sacar el auto del trabajo, esperar horas en un taller o coordinar jalones. Nosotros llevamos el servicio hasta tu puerta con tecnicos certificados, vidrio OEM y garantia escrita.</p><p>Trabajamos con autos particulares, SUVs, pickups, camiones de trabajo y flotillas empresariales.</p><a href="#">Agenda tu servicio</a></div></section>
+<hr class="divider"/>
+<section class="testimonials"><div class="testimonials-inner"><p class="section-label">Lo que dicen nuestros clientes</p><h2 class="section-h2">Un cambio total para tu tranquilidad</h2><div class="testi-grid"><div class="testi-card"><div class="testi-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div><p>"Tenia una grieta enorme en mi Tiguan y pensé que seria un proceso eterno. En menos de 2 horas vinieron a mi casa y quedo perfecto."</p><div class="testi-author">Mariana G.</div><div class="testi-vehicle">Volkswagen Tiguan 2021</div></div><div class="testi-card"><div class="testi-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div><p>"Super profesionales. Al dia siguiente ya tenia el parabrisas nuevo. Sin salir de la oficina. Altamente recomendados."</p><div class="testi-author">Carlos M.</div><div class="testi-vehicle">Toyota Hilux 2020</div></div><div class="testi-card"><div class="testi-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div><p>"Me ayudaron con el tramite del seguro. El precio fue justo y el trabajo impecable. Ya los recomende con 3 amigos."</p><div class="testi-author">Sofia R.</div><div class="testi-vehicle">Honda CR-V 2022</div></div></div></div></section>
+<section class="cotizar-sec"><div class="cotizar-inner"><div style="text-align:center;margin-bottom:3rem"><p class="section-label">Cotizacion gratuita</p><h2 class="section-h2">Solicita tu cita ahora</h2></div><div class="form-layout"><div class="form-intro"><p>Completa el formulario, te contactamos en menos de 30 minutos para confirmar tu cita y darte el precio final.</p><ul class="form-perks"><li><span class="perk-icon">&#128205;</span> Servicio a domicilio sin costo extra</li><li><span class="perk-icon">&#9201;</span> Respuesta en menos de 30 minutos</li><li><span class="perk-icon">&#128737;</span> Garantia escrita en todos los trabajos</li><li><span class="perk-icon">&#128179;</span> Aceptamos seguro de auto</li></ul></div><div class="form-box"><p class="fst">Tus datos</p><div class="form-row"><div class="form-group"><label>Nombre</label><input type="text" placeholder="Juan Perez"/></div><div class="form-group"><label>Telefono</label><input type="tel" placeholder="+52 55 0000 0000"/></div></div><div class="form-group"><label>Correo</label><input type="email" placeholder="juan@email.com"/></div><hr class="fdiv"/><p class="fst">Tu vehiculo</p><div class="form-row"><div class="form-group"><label>Marca</label><input type="text" placeholder="Toyota, Ford..."/></div><div class="form-group"><label>Modelo y ano</label><input type="text" placeholder="Corolla 2020"/></div></div><div class="form-group"><label>Tipo de vehiculo</label><select><option>Sedan</option><option>SUV / Camioneta</option><option>Pickup</option></select></div><hr class="fdiv"/><p class="fst">Tipo de dano</p><div class="form-group"><label>Que dano tiene?</label><select><option>Estrella / impacto pequeno</option><option>Grieta larga</option><option>Parabrisas quebrado</option></select></div><div class="form-group"><label>Descripcion</label><textarea placeholder="Mas detalles..."></textarea></div><hr class="fdiv"/><p class="fst">Fecha preferida</p><div class="form-group"><label>Cuando?</label><input type="date"/></div><button class="btn-submit">Enviar solicitud</button></div></div></div></section>
+<footer><div class="footer-inner"><div class="footer-brand"><div class="logo-footer">Autoglass<span>Tech</span></div><p>Especialistas en reparacion y reemplazo de parabrisas a domicilio.</p></div><div class="footer-col"><h4>Empresa</h4><ul><li><a href="#">Nosotros</a></li><li><a href="#">Servicios</a></li><li><a href="#">Precios</a></li><li><a href="#">Cotizar</a></li></ul></div><div class="footer-col"><h4>Soporte</h4><ul><li><a href="#">WhatsApp</a></li><li><a href="#">FAQ</a></li><li><a href="#">Garantias</a></li><li><a href="#">Seguros</a></li></ul></div></div><div class="footer-bottom"><span>2026 AutoglassTech</span><span>Terminos - Privacidad</span></div></footer>
+</body></html>

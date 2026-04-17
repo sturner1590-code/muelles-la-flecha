@@ -1367,14 +1367,12 @@ function renderRefaccionesTable() {
   let html = '';
   currentOrdenLineas.forEach((linea, idx) => {
     const dataListId = `ref-list-${idx}`;
-    const refaccionesOptions = refacciones.length > 0
-      ? refacciones.map(r => `<option value="${r.id}" label="${r.nombre} (${r.sku})"></option>`).join('')
-      : '';
+    const inputId = `ref-input-${idx}`;
 
     html += `<tr>
       <td>
-        <input type="text" class="form-control" list="${dataListId}" onchange="updateRefaccionLine(${idx},'partId',this.value)" placeholder="Buscar refacción..." style="font-size:12px">
-        <datalist id="${dataListId}">${refaccionesOptions}</datalist>
+        <input type="text" class="form-control ref-autocomplete" id="${inputId}" list="${dataListId}" onchange="updateRefaccionLine(${idx},'partId',this.value)" oninput="filterRefacciones(${idx},'${dataListId}')" placeholder="Buscar refacción..." style="font-size:12px">
+        <datalist id="${dataListId}"></datalist>
       </td>
       <td><input type="number" class="form-control" value="${linea.cantidad}" onchange="updateRefaccionLine(${idx},'cantidad',this.value)" min="1" style="font-size:12px"></td>
       <td><input type="number" class="form-control" value="${linea.precioUnitario}" onchange="updateRefaccionLine(${idx},'precioUnitario',this.value)" step="0.01" style="font-size:12px"></td>
@@ -1395,6 +1393,31 @@ function calculateOrderTotals() {
   document.getElementById('orden-total-material').textContent = fmt(totalMat);
   document.getElementById('orden-total-mano').textContent = fmt(manoObra);
   document.getElementById('orden-total-final').textContent = fmt(total);
+}
+
+function filterRefacciones(idx, datalistId) {
+  const input = document.getElementById(`ref-input-${idx}`);
+  const datalist = document.getElementById(datalistId);
+  const searchText = input.value.toLowerCase().trim();
+  const refacciones = DB.refacciones();
+
+  // Si el campo está vacío, no mostrar opciones
+  if (searchText.length === 0) {
+    datalist.innerHTML = '';
+    return;
+  }
+
+  // Filtrar refacciones por nombre, SKU, o categoría
+  const filtered = refacciones.filter(r =>
+    r.nombre.toLowerCase().includes(searchText) ||
+    r.sku.toLowerCase().includes(searchText) ||
+    (r.categoria && r.categoria.toLowerCase().includes(searchText))
+  );
+
+  // Actualizar datalist con las opciones filtradas
+  datalist.innerHTML = filtered
+    .map(r => `<option value="${r.id}" label="${r.nombre} (${r.sku})"></option>`)
+    .join('');
 }
 
 /* ═══════════════════════════════════════════════════════════════ INLINE CLIENTE/VEHICULO */
