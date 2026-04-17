@@ -1362,14 +1362,13 @@ function lookupRefaccionBySku(idx, sku) {
 
 /* ═══════════════════════════════════════════════════════════════ REFACCIONES DINAMICAS */
 function addRefaccionLine() {
-  const refacciones = DB.refacciones();
   currentOrdenLineas.push({
     id: DB.uid(),
-    partId: refacciones.length > 0 ? refacciones[0].id : '',
-    nombre: refacciones.length > 0 ? refacciones[0].nombre : '',
+    partId: '',
+    nombre: '',
     cantidad: 1,
-    precioUnitario: refacciones.length > 0 ? refacciones[0].precio : 0,
-    subtotal: refacciones.length > 0 ? refacciones[0].precio : 0
+    precioUnitario: 0,
+    subtotal: 0
   });
   renderRefaccionesTable();
   calculateOrderTotals();
