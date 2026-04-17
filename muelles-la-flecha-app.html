@@ -443,7 +443,7 @@
           <label>Cliente</label>
           <div style="display:flex;gap:6px">
             <div style="flex:1">
-              <input type="text" class="form-control" id="orden-cliente" list="orden-cliente-list" onchange="loadVehiculosCliente()" placeholder="Buscar cliente...">
+              <input type="text" class="form-control" id="orden-cliente" list="orden-cliente-list" onchange="selectClienteFromDatalist()" placeholder="Buscar cliente...">
               <datalist id="orden-cliente-list"></datalist>
             </div>
             <button class="btn btn-primary btn-sm" onclick="openInlineClienteForm()">+ Nuevo</button>
@@ -1194,6 +1194,26 @@ function openNewOrdenModal() {
   renderRefaccionesTable();
   calculateOrderTotals();
   openModal('modal-orden');
+}
+
+function selectClienteFromDatalist() {
+  const input = document.getElementById('orden-cliente');
+  const currentValue = input.value.trim();
+  const clientes = DB.clientes();
+
+  // Buscar si el valor es un ID de cliente
+  const cliente = clientes.find(c => c.id === currentValue);
+
+  if (cliente) {
+    // Si encontramos un cliente por ID, mostrar solo el nombre en el input
+    input.value = cliente.nombre;
+    input.dataset.clienteId = cliente.id;
+  } else {
+    // Si no es un ID, guardar lo que escribió para searchear después
+    input.dataset.clienteId = currentValue;
+  }
+
+  loadVehiculosCliente();
 }
 
 function loadVehiculosCliente() {
