@@ -1261,14 +1261,14 @@ function lookupRefaccionBySku(idx, sku) {
 
 /* ═══════════════════════════════════════════════════════════════ REFACCIONES DINAMICAS */
 function addRefaccionLine() {
+  const refacciones = DB.refacciones();
   currentOrdenLineas.push({
     id: DB.uid(),
-    sku: '',
-    partId: '',
-    nombre: '',
+    partId: refacciones.length > 0 ? refacciones[0].id : '',
+    nombre: refacciones.length > 0 ? refacciones[0].nombre : '',
     cantidad: 1,
-    precioUnitario: 0,
-    subtotal: 0
+    precioUnitario: refacciones.length > 0 ? refacciones[0].precio : 0,
+    subtotal: refacciones.length > 0 ? refacciones[0].precio : 0
   });
   renderRefaccionesTable();
   calculateOrderTotals();
@@ -1302,11 +1302,20 @@ function updateRefaccionLine(idx, field, value) {
 }
 
 function renderRefaccionesTable() {
+  const refacciones = DB.refacciones();
+  const refSelect = refacciones.length > 0
+    ? refacciones.map(r=>`<option value="${r.id}">${r.nombre} (${r.sku})</option>`).join('')
+    : '<option value="">Sin refacciones importadas</option>';
+
   let html = '';
   currentOrdenLineas.forEach((linea, idx) => {
+    const selected = refacciones.find(r=>r.id===linea.partId);
+    const refOptions = selected
+      ? `<option value="${selected.id}" selected>${selected.nombre} (${selected.sku})</option>${refSelect}`
+      : refSelect;
+
     html += `<tr>
-      <td><input type="text" class="form-control" placeholder="SKU o nombre..." value="${linea.sku||''}" onchange="lookupRefaccionBySku(${idx},this.value)" onblur="lookupRefaccionBySku(${idx},this.value)" style="font-size:12px;"></td>
-      <td><small>${linea.nombre}</small></td>
+      <td><select class="form-control" onchange="updateRefaccionLine(${idx},'partId',this.value)" style="font-size:12px">${refOptions}</select></td>
       <td><input type="number" class="form-control" value="${linea.cantidad}" onchange="updateRefaccionLine(${idx},'cantidad',this.value)" min="1" style="font-size:12px"></td>
       <td><input type="number" class="form-control" value="${linea.precioUnitario}" onchange="updateRefaccionLine(${idx},'precioUnitario',this.value)" step="0.01" style="font-size:12px"></td>
       <td><strong>${fmt(linea.subtotal)}</strong></td>
