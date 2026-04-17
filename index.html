@@ -1391,7 +1391,7 @@ function renderRefaccionesTable() {
 
     html += `<tr>
       <td>
-        <input type="text" class="form-control ref-autocomplete" id="${inputId}" list="${dataListId}" onchange="selectRefaccionFromDatalist(${idx})" oninput="filterRefacciones(${idx},'${dataListId}')" placeholder="Buscar refacción..." style="font-size:12px">
+        <input type="text" class="form-control ref-autocomplete" id="${inputId}" list="${dataListId}" value="${linea.nombre || ''}" onchange="selectRefaccionFromDatalist(${idx})" oninput="filterRefacciones(${idx},'${dataListId}')" placeholder="Buscar refacción..." style="font-size:12px">
         <datalist id="${dataListId}"></datalist>
       </td>
       <td><input type="number" class="form-control" value="${linea.cantidad}" onchange="updateRefaccionLine(${idx},'cantidad',this.value)" min="1" style="font-size:12px"></td>
