@@ -1427,11 +1427,11 @@ function filterRefacciones(idx, datalistId) {
     return;
   }
 
-  // Filtrar refacciones por nombre, SKU, o categoría (con validaciones)
+  // Filtrar refacciones por nombre, SKU, o categoría (convertir a string)
   const filtered = refacciones.filter(r =>
-    (r.nombre && r.nombre.toLowerCase().includes(searchText)) ||
-    (r.sku && r.sku.toLowerCase().includes(searchText)) ||
-    (r.categoria && r.categoria.toLowerCase().includes(searchText))
+    (r.nombre && String(r.nombre).toLowerCase().includes(searchText)) ||
+    (r.sku && String(r.sku).toLowerCase().includes(searchText)) ||
+    (r.categoria && String(r.categoria).toLowerCase().includes(searchText))
   );
 
   // Actualizar datalist con las opciones filtradas
