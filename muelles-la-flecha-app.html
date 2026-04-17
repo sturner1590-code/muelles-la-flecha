@@ -234,7 +234,6 @@
         <div class="btn-group">
           <input type="text" class="search-bar" placeholder="Buscar orden..." id="search-ordenes" oninput="renderOrdenes()">
           <button class="btn btn-primary" onclick="openNewOrdenModal()">+ Nueva</button>
-          <button class="btn btn-secondary" onclick="triggerImportRefacciones()">📦 Importar Refacciones</button>
         </div>
       </div>
       <div class="filters" id="orden-filters">
@@ -256,6 +255,7 @@
         <div class="btn-group">
           <input type="text" class="search-bar" placeholder="Refaccion..." id="search-inventario" oninput="renderInventario()">
           <button class="btn btn-primary" onclick="openNewPartModal()">+ Nueva</button>
+          <button class="btn btn-secondary" onclick="triggerImportRefacciones()">📥 Importar Excel</button>
         </div>
       </div>
       <div class="table-wrap">
@@ -662,6 +662,67 @@
   </div>
 </div>
 
+<!-- MODAL EDITAR REFACCION -->
+<div class="modal-backdrop" id="modal-refaccion-edit">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Editar Refacción</h3>
+      <button class="modal-close" onclick="closeModal('modal-refaccion-edit')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="ref-edit-id">
+
+      <div class="form-group">
+        <label>SKU *</label>
+        <input class="form-control" id="ref-edit-sku" readonly style="background-color: #f3f4f6; cursor: not-allowed;">
+      </div>
+
+      <div class="form-group">
+        <label>Nombre *</label>
+        <input class="form-control" id="ref-edit-nombre">
+      </div>
+
+      <div class="form-group">
+        <label>Categoría</label>
+        <select class="form-control" id="ref-edit-categoria">
+          <option>Mofles</option>
+          <option>Muelles</option>
+          <option>Suspension</option>
+          <option>Escape</option>
+          <option>Otro</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Precio ($)</label>
+          <input class="form-control" id="ref-edit-precio" type="number" min="0" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>Costo ($)</label>
+          <input class="form-control" id="ref-edit-costo" type="number" min="0" step="0.01">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Stock</label>
+          <input class="form-control" id="ref-edit-stock" type="number" min="0">
+        </div>
+        <div class="form-group">
+          <label>Mínimo</label>
+          <input class="form-control" id="ref-edit-minimo" type="number" min="0">
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-refaccion-edit')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveRefaccionEdit()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL IMPORT PREVIEW -->
 <div class="modal-backdrop" id="modal-import-preview">
   <div class="modal" style="max-width:600px">
@@ -754,7 +815,7 @@ const DB = {
     { id: DB.uid(), sku: 'MFL-001', nombre: 'Mofle Silenciador', categoria: 'Mofles', unit: 'Pieza', costo: 750, venta: 1500, stock: 5, min: 2 }
   ]);
   DB.saveRefacciones([
-    { id: DB.uid(), sku: 'MFL-001', nombre: 'Mofle Silenciador', Categoria: 'Mofles', precio: 1500 }
+    { id: DB.uid(), sku: 'MFL-001', nombre: 'Mofle Silenciador', categoria: 'Mofles', precio: 1500, stock: 5, costo: 750, minimo: 2 }
   ]);
 })();
 
@@ -926,7 +987,10 @@ function handleFileImport() {
         sku: r.SKU || r['sku'] || r['Código'] || r['codigo'] || '',
         nombre: r.Nombre || r['nombre'] || r['Refaccion'] || r['refaccion'] || r.Descripción || r['descripción'] || '',
         categoria: r.Categoría || r['categoria'] || r['Categoria'] || '',
-        precio: r.Precio || r['precio'] || r['Costo'] || r['costo'] || '0'
+        precio: r.Precio || r['precio'] || r['Costo'] || r['costo'] || '0',
+        stock: r.Stock || r['stock'] || '0',
+        costo: r.Costo || r['costo'] || '0',
+        minimo: r.Mínimo || r['minimo'] || r['Mínimo'] || '0'
       })).filter(r => r.sku || r.nombre);
       console.log('Refacciones parseadas:', importData);
       showImportPreview('refacciones', importData);
@@ -962,7 +1026,8 @@ function confirmImport() {
     const refacciones = DB.refacciones();
     const newRefacciones = importData.map(r => ({
       id: DB.uid(),
-      sku: r.sku, nombre: r.nombre, categoria: r.categoria, precio: +r.precio
+      sku: r.sku, nombre: r.nombre, categoria: r.categoria, precio: +r.precio,
+      stock: +r.stock || 0, costo: +r.costo || 0, minimo: +r.minimo || 0
     }));
     DB.saveRefacciones([...refacciones, ...newRefacciones]);
     renderInventario();
@@ -1154,16 +1219,56 @@ function deleteOrden(id) {
   toast('Orden eliminada.','info');
 }
 
+function lookupRefaccionBySku(idx, sku) {
+  if (!sku) {
+    currentOrdenLineas[idx].nombre = '';
+    currentOrdenLineas[idx].partId = '';
+    currentOrdenLineas[idx].precioUnitario = 0;
+    renderRefaccionesTable();
+    return;
+  }
+
+  const skuLower = sku.toLowerCase().trim();
+  const refacciones = DB.refacciones();
+
+  // Buscar por SKU exacto primero
+  let matches = refacciones.filter(r => r.sku.toLowerCase() === skuLower);
+
+  // Si no hay coincidencia exacta, buscar por nombre parcial
+  if (matches.length === 0) {
+    matches = refacciones.filter(r => r.nombre.toLowerCase().includes(skuLower));
+  }
+
+  if (matches.length === 0) {
+    toast(`SKU/Nombre "${sku}" no encontrado.`, 'danger');
+    currentOrdenLineas[idx].nombre = '';
+    currentOrdenLineas[idx].partId = '';
+  } else if (matches.length === 1) {
+    const ref = matches[0];
+    currentOrdenLineas[idx].partId = ref.id;
+    currentOrdenLineas[idx].nombre = ref.nombre;
+    currentOrdenLineas[idx].precioUnitario = ref.precio;
+    currentOrdenLineas[idx].subtotal = ref.precio * currentOrdenLineas[idx].cantidad;
+    toast(`"${ref.nombre}" agregado.`, 'success');
+  } else {
+    toast(`Múltiples coincidencias encontradas. Sé más específico.`, 'warning');
+    currentOrdenLineas[idx].nombre = `${matches.length} coincidencias: ${matches.map(m => m.nombre).join(', ')}`;
+  }
+
+  renderRefaccionesTable();
+  calculateOrderTotals();
+}
+
 /* ═══════════════════════════════════════════════════════════════ REFACCIONES DINAMICAS */
 function addRefaccionLine() {
-  const refacciones = DB.refacciones();
   currentOrdenLineas.push({
     id: DB.uid(),
-    partId: refacciones.length > 0 ? refacciones[0].id : '',
-    nombre: refacciones.length > 0 ? refacciones[0].nombre : '',
+    sku: '',
+    partId: '',
+    nombre: '',
     cantidad: 1,
-    precioUnitario: refacciones.length > 0 ? refacciones[0].precio : 0,
-    subtotal: refacciones.length > 0 ? refacciones[0].precio : 0
+    precioUnitario: 0,
+    subtotal: 0
   });
   renderRefaccionesTable();
   calculateOrderTotals();
@@ -1197,20 +1302,11 @@ function updateRefaccionLine(idx, field, value) {
 }
 
 function renderRefaccionesTable() {
-  const refacciones = DB.refacciones();
-  const refSelect = refacciones.length > 0
-    ? refacciones.map(r=>`<option value="${r.id}">${r.nombre} (${r.sku})</option>`).join('')
-    : '<option value="">Sin refacciones importadas</option>';
-
   let html = '';
   currentOrdenLineas.forEach((linea, idx) => {
-    const selected = refacciones.find(r=>r.id===linea.partId);
-    const refOptions = selected
-      ? `<option value="${selected.id}" selected>${selected.nombre} (${selected.sku})</option>${refSelect}`
-      : refSelect;
-
     html += `<tr>
-      <td><select class="form-control" onchange="updateRefaccionLine(${idx},'partId',this.value)" style="font-size:12px">${refOptions}</select></td>
+      <td><input type="text" class="form-control" placeholder="SKU o nombre..." value="${linea.sku||''}" onchange="lookupRefaccionBySku(${idx},this.value)" onblur="lookupRefaccionBySku(${idx},this.value)" style="font-size:12px;"></td>
+      <td><small>${linea.nombre}</small></td>
       <td><input type="number" class="form-control" value="${linea.cantidad}" onchange="updateRefaccionLine(${idx},'cantidad',this.value)" min="1" style="font-size:12px"></td>
       <td><input type="number" class="form-control" value="${linea.precioUnitario}" onchange="updateRefaccionLine(${idx},'precioUnitario',this.value)" step="0.01" style="font-size:12px"></td>
       <td><strong>${fmt(linea.subtotal)}</strong></td>
@@ -1306,8 +1402,8 @@ function renderInventario() {
   let rows = DB.refacciones();
   if (q) rows = rows.filter(r=>r.nombre.toLowerCase().includes(q)||r.sku.toLowerCase().includes(q));
   document.getElementById('tbody-inventario').innerHTML = rows.length
-    ? rows.map(r=>`<tr><td><code>${r.sku}</code></td><td>${r.nombre}</td><td>—</td><td>—</td><td>${fmt(r.precio)}</td><td><button class="btn btn-danger btn-sm btn-icon" onclick="deleteRefaccion('${r.id}')">🗑</button></td></tr>`).join('')
-    : `<tr><td colspan="6" class="empty-state">Sin refacciones. Importa un archivo Excel.</td></tr>`;
+    ? rows.map(r=>`<tr><td><code>${r.sku}</code></td><td>${r.nombre}</td><td>${r.stock||'—'}</td><td>${r.minimo||'—'}</td><td>${fmt(r.precio)}</td><td><button class="btn btn-primary btn-sm btn-icon" onclick="editRefaccion('${r.id}')">✎</button> <button class="btn btn-danger btn-sm btn-icon" onclick="deleteRefaccion('${r.id}')">🗑</button></td></tr>`).join('')
+    : `<tr><td colspan="7" class="empty-state">Sin refacciones. Importa un archivo Excel.</td></tr>`;
 }
 
 function openNewPartModal() {
@@ -1338,6 +1434,49 @@ function deleteRefaccion(id) {
   DB.saveRefacciones(DB.refacciones().filter(r=>r.id!==id));
   renderInventario();
   toast('Refaccion eliminada.','info');
+}
+
+function editRefaccion(id) {
+  const ref = DB.refacciones().find(r => r.id === id);
+  if (!ref) { toast('Refacción no encontrada.', 'danger'); return; }
+
+  document.getElementById('ref-edit-id').value = ref.id;
+  document.getElementById('ref-edit-sku').value = ref.sku;
+  document.getElementById('ref-edit-nombre').value = ref.nombre;
+  document.getElementById('ref-edit-categoria').value = ref.categoria || 'Mofles';
+  document.getElementById('ref-edit-precio').value = ref.precio || 0;
+  document.getElementById('ref-edit-costo').value = ref.costo || 0;
+  document.getElementById('ref-edit-stock').value = ref.stock || 0;
+  document.getElementById('ref-edit-minimo').value = ref.minimo || 0;
+
+  openModal('modal-refaccion-edit');
+}
+
+function saveRefaccionEdit() {
+  const id = document.getElementById('ref-edit-id').value;
+  const nombre = document.getElementById('ref-edit-nombre').value.trim();
+
+  if (!nombre) { toast('Nombre es requerido.', 'danger'); return; }
+
+  const refacciones = DB.refacciones();
+  const updated = refacciones.map(r =>
+    r.id === id
+      ? {
+          ...r,
+          nombre,
+          categoria: document.getElementById('ref-edit-categoria').value,
+          precio: +document.getElementById('ref-edit-precio').value || 0,
+          costo: +document.getElementById('ref-edit-costo').value || 0,
+          stock: +document.getElementById('ref-edit-stock').value || 0,
+          minimo: +document.getElementById('ref-edit-minimo').value || 0
+        }
+      : r
+  );
+
+  DB.saveRefacciones(updated);
+  renderInventario();
+  closeModal('modal-refaccion-edit');
+  toast('Refacción actualizada.');
 }
 
 /* ═══════════════════════════════════════════════════════════════ REPORTES */
