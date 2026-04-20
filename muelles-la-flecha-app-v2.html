@@ -1244,8 +1244,15 @@ function editVehiculo(id) {
   openModal('modal-vehiculo');
 }
 
+function resolveClienteId(inputId) {
+  const inp = document.getElementById(inputId);
+  if (inp.dataset.clienteId) return inp.dataset.clienteId;
+  const c = DB.clientes().find(c => c.nombre === inp.value || c.id === inp.value);
+  return c ? c.id : inp.value;
+}
+
 function saveVehiculo() {
-  const clienteId = document.getElementById('vehiculo-cliente').value;
+  const clienteId = resolveClienteId('vehiculo-cliente');
   const marca = document.getElementById('vehiculo-marca').value.trim();
   const modelo = document.getElementById('vehiculo-modelo').value.trim();
   if (!clienteId || !marca || !modelo) { toast('Cliente, marca y modelo requeridos.','danger'); return; }
@@ -1654,7 +1661,7 @@ function saveInlineCliente() {
 }
 
 function openInlineVehiculoForm() {
-  const clienteId = document.getElementById('orden-cliente').value || 'NA';
+  const clienteId = resolveClienteId('orden-cliente') || 'NA';
   populateClienteSelect('inline-vehiculo-cliente', clienteId);
   ['inline-vehiculo-placa','inline-vehiculo-vin','inline-vehiculo-color','inline-vehiculo-num'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('inline-vehiculo-marca').value  = '';
@@ -1672,7 +1679,7 @@ function saveInlineVehiculo() {
 
   const newVehiculo = {
     id: DB.uid(),
-    clienteId: document.getElementById('inline-vehiculo-cliente').value,
+    clienteId: resolveClienteId('inline-vehiculo-cliente'),
     placa: document.getElementById('inline-vehiculo-placa').value.trim().toUpperCase(),
     vin: document.getElementById('inline-vehiculo-vin').value.trim(),
     marca, modelo,
