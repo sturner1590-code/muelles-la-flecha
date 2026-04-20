@@ -99,6 +99,7 @@
     .form-control:focus { border-color: var(--primary); background: #fff9f7; }
     .form-control.error { border-color: var(--danger); }
     select.form-control { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7280'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
+    select.form-control:disabled { background-color: #f3f4f6; color: #9ca3af; cursor: not-allowed; border-color: #e5e7eb; }
     .toast-container { position: fixed; top: 16px; right: 16px; z-index: 999; display: flex; flex-direction: column; gap: 8px; }
     .toast { padding: 12px 18px; border-radius: 8px; color: #fff; font-size: 13px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,.2); animation: slideIn .25s ease; max-width: 300px; }
     .toast-success { background: var(--success); }
@@ -401,17 +402,23 @@
       <div class="form-row">
         <div class="form-group">
           <label>Marca *</label>
-          <input class="form-control" id="vehiculo-marca" placeholder="Toyota">
+          <select class="form-control" id="vehiculo-marca" onchange="onMarcaChange('vehiculo')">
+            <option value="">— Seleccionar marca —</option>
+          </select>
         </div>
         <div class="form-group">
           <label>Modelo *</label>
-          <input class="form-control" id="vehiculo-modelo" placeholder="Corolla">
+          <select class="form-control" id="vehiculo-modelo" onchange="onModeloChange('vehiculo')" disabled>
+            <option value="">— Seleccionar modelo —</option>
+          </select>
         </div>
       </div>
       <div class="form-row">
         <div class="form-group">
           <label>Año</label>
-          <input class="form-control" id="vehiculo-anio" type="number" placeholder="2020">
+          <select class="form-control" id="vehiculo-anio" disabled>
+            <option value="">— Año —</option>
+          </select>
         </div>
         <div class="form-group">
           <label>Color</label>
@@ -605,28 +612,40 @@
       <div class="form-row">
         <div class="form-group">
           <label>Marca *</label>
-          <input class="form-control" id="inline-vehiculo-marca" placeholder="Toyota">
+          <select class="form-control" id="inline-vehiculo-marca" onchange="onMarcaChange('inline-vehiculo')">
+            <option value="">— Seleccionar marca —</option>
+          </select>
         </div>
         <div class="form-group">
           <label>Modelo *</label>
-          <input class="form-control" id="inline-vehiculo-modelo" placeholder="Corolla">
+          <select class="form-control" id="inline-vehiculo-modelo" onchange="onModeloChange('inline-vehiculo')" disabled>
+            <option value="">— Seleccionar modelo —</option>
+          </select>
         </div>
       </div>
       <div class="form-row">
+        <div class="form-group">
+          <label>Año</label>
+          <select class="form-control" id="inline-vehiculo-anio" disabled>
+            <option value="">— Año —</option>
+          </select>
+        </div>
         <div class="form-group">
           <label>Placa</label>
           <input class="form-control" id="inline-vehiculo-placa" placeholder="ABC-123">
         </div>
+      </div>
+      <div class="form-row">
         <div class="form-group">
           <label>VIN</label>
           <input class="form-control" id="inline-vehiculo-vin" placeholder="VIN...">
         </div>
-      </div>
-      <div class="form-row">
         <div class="form-group">
           <label>Color</label>
           <input class="form-control" id="inline-vehiculo-color" placeholder="Blanco">
         </div>
+      </div>
+      <div class="form-row">
         <div class="form-group">
           <label>Número Unidad</label>
           <input class="form-control" id="inline-vehiculo-num" placeholder="UNI-001">
@@ -772,6 +791,9 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 /* ─── CACHÉ LOCAL (espejo de Supabase) ────────────────────────── */
 const CACHE = { clientes: [], vehiculos: [], ordenes: [], refacciones: [] };
 
+/* ─── CATÁLOGO DE VEHÍCULOS ───────────────────────────────────── */
+let VEHICULO_CATALOG = {};
+
 /* ═══════════════════════════════════════════════════════════════ DATA LAYER */
 const DB = {
   uid: () => Date.now().toString(36) + Math.random().toString(36).slice(2),
@@ -825,11 +847,12 @@ function seedDemo() {
 /* ═══════════════════════════════════════════════════════════════ INIT */
 async function initApp() {
   try {
-    const [c, v, o, r] = await Promise.all([
+    const [c, v, o, r, cat] = await Promise.all([
       sb.from('clientes').select('*'),
       sb.from('vehiculos').select('*'),
       sb.from('ordenes').select('*'),
-      sb.from('refacciones').select('*')
+      sb.from('refacciones').select('*'),
+      fetch('catalogo-vehiculos.json').then(res => res.ok ? res.json() : {}).catch(() => ({}))
     ]);
     if (c.error) throw c.error;
     if (v.error) throw v.error;
@@ -840,7 +863,9 @@ async function initApp() {
     CACHE.vehiculos   = v.data || [];
     CACHE.ordenes     = o.data || [];
     CACHE.refacciones = r.data || [];
+    VEHICULO_CATALOG  = cat || {};
 
+    populateMarcaDropdowns();
     if (!CACHE.clientes.length) seedDemo();
   } catch (err) {
     console.error('[Supabase init]', err);
@@ -1090,9 +1115,87 @@ function renderVehiculos() {
     : `<tr><td colspan="5" class="empty-state">Sin vehiculos</td></tr>`;
 }
 
+/* ═══════════════════════════════════════════════════════════════ CATÁLOGO VEHÍCULOS */
+function populateMarcaDropdowns() {
+  const marcas = Object.keys(VEHICULO_CATALOG).sort((a,b) => a.localeCompare(b));
+  const opts = '<option value="">— Seleccionar marca —</option>' +
+    marcas.map(m => `<option value="${m}">${m}</option>`).join('');
+  const ids = ['vehiculo-marca', 'inline-vehiculo-marca'];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = opts;
+  });
+}
+
+function onMarcaChange(prefix) {
+  const marca = document.getElementById(prefix + '-marca').value;
+  const modeloSel = document.getElementById(prefix + '-modelo');
+  const anioSel   = document.getElementById(prefix + '-anio');
+  modeloSel.innerHTML = '<option value="">— Seleccionar modelo —</option>';
+  if (anioSel) { anioSel.innerHTML = '<option value="">— Año —</option>'; anioSel.disabled = true; }
+  if (!marca || !VEHICULO_CATALOG[marca]) { modeloSel.disabled = true; return; }
+  const modelos = Object.keys(VEHICULO_CATALOG[marca]).sort((a,b) => a.localeCompare(b));
+  modeloSel.innerHTML = '<option value="">— Seleccionar modelo —</option>' +
+    modelos.map(m => `<option value="${m}">${m}</option>`).join('');
+  modeloSel.disabled = false;
+}
+
+function onModeloChange(prefix) {
+  const marca   = document.getElementById(prefix + '-marca').value;
+  const modelo  = document.getElementById(prefix + '-modelo').value;
+  const anioSel = document.getElementById(prefix + '-anio');
+  if (!anioSel) return;
+  anioSel.innerHTML = '<option value="">— Año —</option>';
+  if (!marca || !modelo || !VEHICULO_CATALOG[marca]?.[modelo]) { anioSel.disabled = true; return; }
+  const years = VEHICULO_CATALOG[marca][modelo];
+  anioSel.innerHTML = '<option value="">— Año —</option>' +
+    years.map(y => `<option value="${y}">${y}</option>`).join('');
+  anioSel.disabled = false;
+}
+
+function setVehiculoCatalogValues(prefix, marca, modelo, anio) {
+  const marcaSel  = document.getElementById(prefix + '-marca');
+  const modeloSel = document.getElementById(prefix + '-modelo');
+  const anioSel   = document.getElementById(prefix + '-anio');
+  if (!marcaSel) return;
+
+  // Marca
+  if (marca) {
+    if (!marcaSel.querySelector(`option[value="${CSS.escape(marca)}"]`)) {
+      const opt = Object.assign(document.createElement('option'), { value: marca, textContent: marca });
+      marcaSel.appendChild(opt);
+    }
+    marcaSel.value = marca;
+    onMarcaChange(prefix);
+  }
+  // Modelo
+  if (modelo && modeloSel) {
+    if (!modeloSel.querySelector(`option[value="${CSS.escape(modelo)}"]`)) {
+      const opt = Object.assign(document.createElement('option'), { value: modelo, textContent: modelo });
+      modeloSel.appendChild(opt);
+    }
+    modeloSel.value = modelo;
+    onModeloChange(prefix);
+  }
+  // Año
+  if (anio && anioSel) {
+    const anioStr = String(anio);
+    if (!anioSel.querySelector(`option[value="${anioStr}"]`)) {
+      const opt = Object.assign(document.createElement('option'), { value: anioStr, textContent: anioStr });
+      anioSel.appendChild(opt);
+    }
+    anioSel.value = anioStr;
+  }
+}
+
 function openNewVehiculoModal() {
   document.getElementById('vehiculo-id').value = '';
-  ['vehiculo-placa','vehiculo-vin','vehiculo-marca','vehiculo-modelo','vehiculo-anio','vehiculo-color','vehiculo-km','vehiculo-numero-unidad'].forEach(id=>document.getElementById(id).value='');
+  ['vehiculo-placa','vehiculo-vin','vehiculo-color','vehiculo-km','vehiculo-numero-unidad'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('vehiculo-marca').value  = '';
+  document.getElementById('vehiculo-modelo').innerHTML = '<option value="">— Seleccionar modelo —</option>';
+  document.getElementById('vehiculo-modelo').disabled  = true;
+  document.getElementById('vehiculo-anio').innerHTML   = '<option value="">— Año —</option>';
+  document.getElementById('vehiculo-anio').disabled    = true;
   populateClienteSelect('vehiculo-cliente','');
   openModal('modal-vehiculo');
 }
@@ -1133,10 +1236,8 @@ function editVehiculo(id) {
   document.getElementById('vehiculo-id').value = v.id;
   document.getElementById('vehiculo-placa').value = v.placa||'';
   document.getElementById('vehiculo-vin').value = v.vin||'';
-  document.getElementById('vehiculo-marca').value = v.marca;
-  document.getElementById('vehiculo-modelo').value = v.modelo;
   document.getElementById('vehiculo-color').value = v.color||'';
-  document.getElementById('vehiculo-anio').value = v.anio||'';
+  setVehiculoCatalogValues('vehiculo', v.marca, v.modelo, v.anio);
   document.getElementById('vehiculo-km').value = v.km||'';
   document.getElementById('vehiculo-numero-unidad').value = v.numeroUnidad||'';
   populateClienteSelect('vehiculo-cliente', v.clienteId);
@@ -1544,7 +1645,12 @@ function saveInlineCliente() {
 function openInlineVehiculoForm() {
   const clienteId = document.getElementById('orden-cliente').value || 'NA';
   populateClienteSelect('inline-vehiculo-cliente', clienteId);
-  ['inline-vehiculo-marca','inline-vehiculo-modelo','inline-vehiculo-placa','inline-vehiculo-vin','inline-vehiculo-color','inline-vehiculo-num'].forEach(id=>document.getElementById(id).value='');
+  ['inline-vehiculo-placa','inline-vehiculo-vin','inline-vehiculo-color','inline-vehiculo-num'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('inline-vehiculo-marca').value  = '';
+  document.getElementById('inline-vehiculo-modelo').innerHTML = '<option value="">— Seleccionar modelo —</option>';
+  document.getElementById('inline-vehiculo-modelo').disabled  = true;
+  document.getElementById('inline-vehiculo-anio').innerHTML   = '<option value="">— Año —</option>';
+  document.getElementById('inline-vehiculo-anio').disabled    = true;
   openModal('modal-vehiculo-inline');
 }
 
@@ -1560,7 +1666,8 @@ function saveInlineVehiculo() {
     vin: document.getElementById('inline-vehiculo-vin').value.trim(),
     marca, modelo,
     color: document.getElementById('inline-vehiculo-color').value.trim(),
-    anio: null, km: 0,
+    anio: +document.getElementById('inline-vehiculo-anio').value||null,
+    km: 0,
     numeroUnidad: document.getElementById('inline-vehiculo-num').value.trim()
   };
   let vehiculos = DB.vehiculos();
