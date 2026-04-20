@@ -1342,25 +1342,27 @@ function selectClienteFromDatalist() {
   loadVehiculosCliente();
 }
 
+function vehiculoDisplayText(v) {
+  if (!v) return '';
+  let txt = `${v.marca} ${v.modelo}`;
+  if (v.anio) txt += ` ${v.anio}`;
+  if (v.placa) txt += ` — ${v.placa}`;
+  return txt;
+}
+
 function selectVehiculoFromDatalist() {
   const input = document.getElementById('orden-vehiculo');
   const currentValue = input.value.trim();
   const vehiculos = DB.vehiculos();
 
-  // Buscar vehículo por displayText (case-insensitive) o ID
-  let vehiculo = vehiculos.find(v => {
-    const displayText = `${v.placa || v.vin || v.marca} ${v.modelo}`;
-    return displayText.toLowerCase() === currentValue.toLowerCase() ||
-           v.id === currentValue ||
-           displayText.toLowerCase().includes(currentValue.toLowerCase());
+  const vehiculo = vehiculos.find(v => {
+    const dt = vehiculoDisplayText(v);
+    return dt.toLowerCase() === currentValue.toLowerCase() || v.id === currentValue;
   });
 
   if (vehiculo) {
-    const displayText = `${vehiculo.placa || vehiculo.vin || vehiculo.marca} ${vehiculo.modelo}`;
-    input.value = displayText;
+    input.value = vehiculoDisplayText(vehiculo);
     input.dataset.vehiculoId = vehiculo.id;
-  } else {
-    input.dataset.vehiculoId = currentValue;
   }
 }
 
@@ -1387,13 +1389,11 @@ function loadVehiculosCliente() {
 
   const vehs = DB.vehiculos().filter(v => v.clienteId === clienteId);
   datalist.innerHTML = vehs.length
-    ? vehs.map(v => {
-        const displayText = `${v.placa || v.vin || v.marca} ${v.modelo}`;
-        return `<option value="${displayText}"></option>`;
-      }).join('')
+    ? vehs.map(v => `<option value="${vehiculoDisplayText(v)}"></option>`).join('')
     : '';
 
-  input.value = ''; // Limpiar el input de vehículo cuando cambia el cliente
+  input.value = '';
+  input.dataset.vehiculoId = '';
 }
 
 function editOrden(id) {
@@ -1408,7 +1408,17 @@ function editOrden(id) {
   populateClienteSelect('orden-cliente', o.clienteId);
   setTimeout(()=>{
     loadVehiculosCliente();
-    setTimeout(()=>{ document.getElementById('orden-vehiculo').value = o.vehiculoId; }, 0);
+    setTimeout(()=>{
+      const v = DB.vehiculos().find(v => v.id === o.vehiculoId);
+      const inp = document.getElementById('orden-vehiculo');
+      if (v) {
+        inp.value = vehiculoDisplayText(v);
+        inp.dataset.vehiculoId = v.id;
+      } else {
+        inp.value = '';
+        inp.dataset.vehiculoId = '';
+      }
+    }, 0);
   }, 0);
   currentOrdenLineas = JSON.parse(JSON.stringify(o.lineas || []));
   renderRefaccionesTable();
@@ -1418,7 +1428,8 @@ function editOrden(id) {
 
 function saveOrden() {
   const clienteId = document.getElementById('orden-cliente').value;
-  const vehiculoId = document.getElementById('orden-vehiculo').value;
+  const vehInput = document.getElementById('orden-vehiculo');
+  const vehiculoId = vehInput.dataset.vehiculoId || vehInput.value;
   const descripcion = document.getElementById('orden-descripcion').value.trim();
   if (!clienteId||!vehiculoId||!descripcion) { toast('Campos requeridos.','danger'); return; }
 
@@ -1675,7 +1686,9 @@ function saveInlineVehiculo() {
   DB.saveVehiculos(vehiculos);
 
   loadVehiculosCliente();
-  document.getElementById('orden-vehiculo').value = newVehiculo.id;
+  const inp = document.getElementById('orden-vehiculo');
+  inp.value = vehiculoDisplayText(newVehiculo);
+  inp.dataset.vehiculoId = newVehiculo.id;
 
   closeModal('modal-vehiculo-inline');
   toast('Vehiculo creado y seleccionado.');
