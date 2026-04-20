@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>Muelles y Mofles La Flecha</title>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
       --primary:   #dc2626;
@@ -140,17 +139,9 @@
     .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
     .filter-chip { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; border: 1.5px solid var(--border); background: var(--white); cursor: pointer; transition: background .15s, color .15s; }
     .filter-chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
-
-<!-- LOADING SCREEN -->
-<div id="loading-screen" style="display:flex;position:fixed;inset:0;background:rgba(255,255,255,.93);z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:16px">
-  <div style="font-size:42px;animation:spin .9s linear infinite">⚙️</div>
-  <div style="font-weight:700;font-size:17px;color:#991b1b">Cargando datos...</div>
-  <div style="font-size:13px;color:#6b7280">Conectando con Supabase</div>
-</div>
 
 <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
 <aside class="sidebar" id="sidebar">
@@ -762,50 +753,61 @@
 <input type="file" id="hidden-file-input" style="display:none" accept=".xlsx,.xls" onchange="handleFileImport()">
 
 <script>
-/* ═══════════════════════════════════════════════════════════════ SUPABASE CONFIG */
-// ⚠️  Reemplaza con tus credenciales: Supabase Dashboard → Settings → API
-const SUPABASE_URL      = 'TU_SUPABASE_URL';
-const SUPABASE_ANON_KEY = 'TU_SUPABASE_ANON_KEY';
-
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-/* ─── CACHÉ LOCAL (espejo de Supabase) ────────────────────────── */
-const CACHE = { clientes: [], vehiculos: [], ordenes: [], refacciones: [] };
-
 /* ═══════════════════════════════════════════════════════════════ DATA LAYER */
 const DB = {
+  get: k => JSON.parse(localStorage.getItem(k) || '[]'),
+  set: (k, v) => localStorage.setItem(k, JSON.stringify(v)),
   uid: () => Date.now().toString(36) + Math.random().toString(36).slice(2),
 
-  clientes:    () => CACHE.clientes,
-  vehiculos:   () => CACHE.vehiculos,
-  ordenes:     () => CACHE.ordenes,
-  parts:       () => CACHE.refacciones,
-  refacciones: () => CACHE.refacciones,
+  clientes:    () => DB.get('mfl_clientes'),
+  vehiculos:   () => DB.get('mfl_vehiculos'),
+  ordenes:     () => DB.get('mfl_ordenes'),
+  parts:       () => DB.get('mfl_parts'),
+  refacciones: () => DB.get('mfl_refacciones'),
 
-  /* Sincroniza cambios con Supabase en segundo plano (fire-and-forget) */
-  _push(table, newData, oldData) {
-    const newIds    = new Set(newData.map(i => i.id));
-    const deletedIds = (oldData || []).map(i => i.id).filter(id => !newIds.has(id));
-    if (newData.length > 0) {
-      sb.from(table).upsert(newData)
-        .then(({ error }) => { if (error) console.error('[Supabase upsert]', table, error.message); });
-    }
-    deletedIds.forEach(id => {
-      sb.from(table).delete().eq('id', id)
-        .then(({ error }) => { if (error) console.error('[Supabase delete]', table, error.message); });
-    });
-  },
-
-  saveClientes(v)    { const o = CACHE.clientes;    CACHE.clientes = v;    DB._push('clientes', v, o); },
-  saveVehiculos(v)   { const o = CACHE.vehiculos;   CACHE.vehiculos = v;   DB._push('vehiculos', v, o); },
-  saveOrdenes(v)     { const o = CACHE.ordenes;     CACHE.ordenes = v;     DB._push('ordenes', v, o); },
-  saveParts(v)       { DB.saveRefacciones(v); },
-  saveRefacciones(v) { const o = CACHE.refacciones; CACHE.refacciones = v; DB._push('refacciones', v, o); },
+  saveClientes:    v => DB.set('mfl_clientes', v),
+  saveVehiculos:   v => DB.set('mfl_vehiculos', v),
+  saveOrdenes:     v => DB.set('mfl_ordenes', v),
+  saveParts:       v => DB.set('mfl_parts', v),
+  saveRefacciones: v => DB.set('mfl_refacciones', v),
 };
 
-/* SEED — solo si las tablas están vacías en Supabase */
-function seedDemo() {
-  if (CACHE.clientes.length) return;
+/* MIGRATION */
+(function migrate() {
+  const clientes = DB.clientes();
+  if (clientes.length) {
+    const updated = clientes.map(c => ({
+      ...c,
+      razonSocial: c.razonSocial || '',
+      tipoCliente: c.tipoCliente || 'contado'
+    }));
+    DB.saveClientes(updated);
+  }
+
+  const vehis = DB.vehiculos();
+  if (vehis.length) {
+    const updated = vehis.map(v => ({
+      ...v,
+      vin: v.vin || '',
+      numeroUnidad: v.numeroUnidad || ''
+    }));
+    DB.saveVehiculos(updated);
+  }
+
+  const ordenes = DB.ordenes();
+  if (ordenes.length) {
+    const updated = ordenes.map(o => ({
+      ...o,
+      lineas: o.lineas || [],
+      totalMaterial: o.totalMaterial || 0
+    }));
+    DB.saveOrdenes(updated);
+  }
+})();
+
+/* SEED */
+(function seedDemo() {
+  if (DB.clientes().length) return;
   const c1 = DB.uid();
   DB.saveClientes([
     { id: c1, nombre: 'Roberto Gomez', telefono: '8614556677', email: 'r.gomez@email.com', razonSocial: 'RG Transportes', tipoCliente: 'credito' }
@@ -815,40 +817,15 @@ function seedDemo() {
     { id: v1, clienteId: c1, placa: 'ABC-1234', marca: 'Chevrolet', modelo: 'Silverado', anio: 2018, color: 'Blanco', km: 125000, vin: '1GCEK14K2ZE556688', numeroUnidad: 'UNI-001' }
   ]);
   DB.saveOrdenes([
-    { id: DB.uid(), clienteId: c1, vehiculoId: v1, descripcion: 'Cambio de mofle', estado: 'en_proceso', prioridad: 'normal', manoObra: 800, lineas: [], totalMaterial: 0, notas: '', creadoEn: new Date().toISOString() }
+   { id: DB.uid(), clienteId: c1, vehiculoId: v1, descripcion: 'Cambio de mofle', estado: 'en_proceso', prioridad: 'normal', manoObra: 800, lineas: [], totalMaterial: 0, notas: '', creadoEn: new Date().toISOString() }
+  ]);
+  DB.saveParts([
+    { id: DB.uid(), sku: 'MFL-001', nombre: 'Mofle Silenciador', categoria: 'Mofles', unit: 'Pieza', costo: 750, venta: 1500, stock: 5, min: 2 }
   ]);
   DB.saveRefacciones([
     { id: DB.uid(), sku: 'MFL-001', nombre: 'Mofle Silenciador', categoria: 'Mofles', precio: 1500, stock: 5, costo: 750, minimo: 2 }
   ]);
-}
-
-/* ═══════════════════════════════════════════════════════════════ INIT */
-async function initApp() {
-  try {
-    const [c, v, o, r] = await Promise.all([
-      sb.from('clientes').select('*'),
-      sb.from('vehiculos').select('*'),
-      sb.from('ordenes').select('*'),
-      sb.from('refacciones').select('*')
-    ]);
-    if (c.error) throw c.error;
-    if (v.error) throw v.error;
-    if (o.error) throw o.error;
-    if (r.error) throw r.error;
-
-    CACHE.clientes    = c.data || [];
-    CACHE.vehiculos   = v.data || [];
-    CACHE.ordenes     = o.data || [];
-    CACHE.refacciones = r.data || [];
-
-    if (!CACHE.clientes.length) seedDemo();
-  } catch (err) {
-    console.error('[Supabase init]', err);
-    toast('⚠️ Error de conexión. Revisa las credenciales de Supabase en el código.', 'danger');
-  }
-  document.getElementById('loading-screen').style.display = 'none';
-  renderDashboard();
-}
+})();
 
 /* STATE */
 let importData = [];
@@ -1509,6 +1486,9 @@ function selectRefaccionFromDatalist(idx) {
   } else {
     input.dataset.refaccionId = currentValue;
   }
+
+  // Ahora actualizar la línea con el ID de la refacción
+  updateRefaccionLine(idx, 'partId', refaccion ? refaccion.id : currentValue);
 }
 
 /* ═══════════════════════════════════════════════════════════════ INLINE CLIENTE/VEHICULO */
@@ -1721,7 +1701,7 @@ document.addEventListener('keydown', e => {
   }
 });
 
-initApp();
+renderDashboard();
 </script>
 </body>
 </html>
