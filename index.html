@@ -232,7 +232,7 @@
         </div>
       </div>
       <div class="table-wrap">
-        <table><thead><tr><th>Placa/VIN</th><th>Marca/Modelo</th><th>Año</th><th>Cliente</th><th>Acciones</th></tr></thead>
+        <table><thead><tr><th>Marca/Modelo</th><th>Año</th><th>Color</th><th>Cliente</th><th>Núm. Unidad</th><th>VIN/Placa</th><th>Acciones</th></tr></thead>
           <tbody id="tbody-vehiculos"></tbody></table>
       </div>
     </section>
@@ -1137,11 +1137,19 @@ function renderVehiculos() {
   if (q) rows = rows.filter(v=>v.placa?.toLowerCase().includes(q)||v.marca.toLowerCase().includes(q)||v.vin?.toLowerCase().includes(q));
   document.getElementById('tbody-vehiculos').innerHTML = rows.length
     ? rows.map(v=>{
-        const id = v.placa || v.vin || '—';
         const cliente = v.clienteId === 'NA' ? 'N/A' : getClienteName(v.clienteId);
-        return `<tr><td><strong>${id}</strong></td><td>${v.marca} ${v.modelo}</td><td>${v.anio||'—'}</td><td>${cliente}</td><td><button class="btn btn-outline btn-sm btn-icon" onclick="editVehiculo('${v.id}')">✎</button><button class="btn btn-danger btn-sm btn-icon" onclick="deleteVehiculo('${v.id}')">🗑</button></td></tr>`;
+        const vinPlaca = [v.placa, v.vin].filter(Boolean).join(' / ') || '—';
+        return `<tr>
+          <td><strong>${v.marca} ${v.modelo}</strong></td>
+          <td>${v.anio||'—'}</td>
+          <td>${v.color||'—'}</td>
+          <td>${cliente}</td>
+          <td>${v.numeroUnidad||'—'}</td>
+          <td>${vinPlaca}</td>
+          <td><button class="btn btn-outline btn-sm btn-icon" onclick="editVehiculo('${v.id}')">✎</button><button class="btn btn-danger btn-sm btn-icon" onclick="deleteVehiculo('${v.id}')">🗑</button></td>
+        </tr>`;
       }).join('')
-    : `<tr><td colspan="5" class="empty-state">Sin vehiculos</td></tr>`;
+    : `<tr><td colspan="7" class="empty-state">Sin vehiculos</td></tr>`;
 }
 
 /* ═══════════════════════════════════════════════════════════════ CATÁLOGO VEHÍCULOS */
