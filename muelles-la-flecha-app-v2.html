@@ -829,11 +829,15 @@ const DB = {
 
   /* Sincroniza cambios con Supabase en segundo plano (fire-and-forget) */
   _push(table, newData, oldData) {
-    const newIds    = new Set(newData.map(i => i.id));
+    const newIds     = new Set(newData.map(i => i.id));
     const deletedIds = (oldData || []).map(i => i.id).filter(id => !newIds.has(id));
     if (newData.length > 0) {
-      sb.from(table).upsert(newData)
-        .then(({ error }) => { if (error) console.error('[Supabase upsert]', table, error.message); });
+      const BATCH = 500;
+      for (let i = 0; i < newData.length; i += BATCH) {
+        const chunk = newData.slice(i, i + BATCH);
+        sb.from(table).upsert(chunk)
+          .then(({ error }) => { if (error) console.error('[Supabase upsert]', table, i, error.message); });
+      }
     }
     deletedIds.forEach(id => {
       sb.from(table).delete().eq('id', id)
