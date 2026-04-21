@@ -403,15 +403,20 @@
         <input type="text" class="form-control" id="vehiculo-cliente" list="vehiculo-cliente-list" placeholder="Buscar cliente...">
         <datalist id="vehiculo-cliente-list"></datalist>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Placa</label>
-          <input class="form-control" id="vehiculo-placa" placeholder="ABC-123" style="text-transform:uppercase">
+      <div class="form-group">
+        <label>Placa</label>
+        <input class="form-control" id="vehiculo-placa" placeholder="ABC-123" style="text-transform:uppercase">
+      </div>
+      <div class="form-group">
+        <label>VIN <span style="font-size:11px;color:var(--muted);font-weight:normal">— 17 caracteres · auto-decodifica marca/modelo/año</span></label>
+        <div style="display:flex;gap:8px;align-items:stretch">
+          <input class="form-control" id="vehiculo-vin" placeholder="1HGBH41JXMN109186" maxlength="17"
+            style="text-transform:uppercase;letter-spacing:.08em;font-family:monospace"
+            oninput="onVinInput('vehiculo')">
+          <button type="button" class="btn btn-secondary btn-sm" id="vehiculo-vin-btn"
+            onclick="decodeVin('vehiculo')" style="white-space:nowrap;padding:0 12px">🔍 Decodificar</button>
         </div>
-        <div class="form-group">
-          <label>VIN</label>
-          <input class="form-control" id="vehiculo-vin" placeholder="1HGBH41JX...">
-        </div>
+        <div id="vehiculo-vin-status" style="font-size:12px;margin-top:5px;min-height:16px"></div>
       </div>
       <div class="form-row">
         <div class="form-group">
@@ -650,15 +655,20 @@
           <input class="form-control" id="inline-vehiculo-placa" placeholder="ABC-123">
         </div>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>VIN</label>
-          <input class="form-control" id="inline-vehiculo-vin" placeholder="VIN...">
+      <div class="form-group">
+        <label>VIN <span style="font-size:11px;color:var(--muted);font-weight:normal">— 17 caracteres · auto-decodifica marca/modelo/año</span></label>
+        <div style="display:flex;gap:8px;align-items:stretch">
+          <input class="form-control" id="inline-vehiculo-vin" placeholder="1HGBH41JXMN109186" maxlength="17"
+            style="text-transform:uppercase;letter-spacing:.08em;font-family:monospace"
+            oninput="onVinInput('inline-vehiculo')">
+          <button type="button" class="btn btn-secondary btn-sm" id="inline-vehiculo-vin-btn"
+            onclick="decodeVin('inline-vehiculo')" style="white-space:nowrap;padding:0 12px">🔍 Decodificar</button>
         </div>
-        <div class="form-group">
-          <label>Color</label>
-          <input class="form-control" id="inline-vehiculo-color" placeholder="Blanco">
-        </div>
+        <div id="inline-vehiculo-vin-status" style="font-size:12px;margin-top:5px;min-height:16px"></div>
+      </div>
+      <div class="form-group">
+        <label>Color</label>
+        <input class="form-control" id="inline-vehiculo-color" placeholder="Blanco">
       </div>
       <div class="form-row">
         <div class="form-group">
@@ -1258,6 +1268,70 @@ function setVehiculoCatalogValues(prefix, marca, modelo, anio) {
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════ DECODIFICADOR VIN (NHTSA) */
+function onVinInput(prefix) {
+  const vin = document.getElementById(prefix + '-vin').value.trim();
+  if (vin.length === 17) decodeVin(prefix);
+}
+
+async function decodeVin(prefix) {
+  const vinEl   = document.getElementById(prefix + '-vin');
+  const statusEl = document.getElementById(prefix + '-vin-status');
+  const btnEl   = document.getElementById(prefix + '-vin-btn');
+  const vin     = vinEl.value.trim().toUpperCase();
+
+  if (vin.length !== 17) {
+    statusEl.innerHTML = '<span style="color:#dc2626">⚠️ El VIN debe tener exactamente 17 caracteres</span>';
+    return;
+  }
+
+  // Estado: cargando
+  statusEl.innerHTML = '<span style="color:#6b7280">⏳ Consultando base de datos NHTSA...</span>';
+  vinEl.style.borderColor = '#6b7280';
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = '⏳'; }
+
+  try {
+    const url = `https://vpic.nhtsa.dot.gov/api/vehicles/decodevin/${encodeURIComponent(vin)}?format=json`;
+    const res  = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+
+    const get = (variable) => {
+      const item = (data.Results || []).find(r => r.Variable === variable);
+      return item?.Value && item.Value !== 'Not Applicable' && item.Value !== null ? item.Value : null;
+    };
+
+    const rawMake  = get('Make');
+    const rawModel = get('Model');
+    const rawYear  = get('Model Year');
+
+    if (!rawMake || !rawModel || !rawYear) {
+      statusEl.innerHTML = '<span style="color:#dc2626">❌ VIN no reconocido o datos incompletos en NHTSA</span>';
+      vinEl.style.borderColor = '#dc2626';
+      return;
+    }
+
+    // Buscar coincidencia case-insensitive en el catálogo
+    const catalogMarca = Object.keys(VEHICULO_CATALOG).find(k => k.toLowerCase() === rawMake.toLowerCase()) || rawMake;
+    // Normalizar modelo (NHTSA suele devolver nombre exacto o similar)
+    const modelos = VEHICULO_CATALOG[catalogMarca] ? Object.keys(VEHICULO_CATALOG[catalogMarca]) : [];
+    const catalogModelo = modelos.find(m => m.toLowerCase() === rawModel.toLowerCase()) || rawModel;
+
+    // Llenar dropdowns
+    setVehiculoCatalogValues(prefix, catalogMarca, catalogModelo, rawYear);
+
+    const inCatalog = !!VEHICULO_CATALOG[catalogMarca];
+    statusEl.innerHTML = `<span style="color:#057a55">✅ Vehículo identificado: <strong>${catalogMarca} ${catalogModelo} ${rawYear}</strong>${inCatalog ? '' : ' <em style="color:#c27803">(no en catálogo local, datos cargados igualmente)</em>'}</span>`;
+    vinEl.style.borderColor = '#057a55';
+  } catch (err) {
+    statusEl.innerHTML = `<span style="color:#dc2626">❌ Error al consultar NHTSA: ${err.message}</span>`;
+    vinEl.style.borderColor = '#dc2626';
+    console.error('[decodeVin]', err);
+  } finally {
+    if (btnEl) { btnEl.disabled = false; btnEl.textContent = '🔍 Decodificar'; }
+  }
+}
+
 function openNewVehiculoModal() {
   document.getElementById('vehiculo-id').value = '';
   ['vehiculo-placa','vehiculo-vin','vehiculo-color','vehiculo-km','vehiculo-numero-unidad'].forEach(id=>document.getElementById(id).value='');
@@ -1266,6 +1340,8 @@ function openNewVehiculoModal() {
   document.getElementById('vehiculo-modelo').disabled  = true;
   document.getElementById('vehiculo-anio').innerHTML   = '<option value="">— Año —</option>';
   document.getElementById('vehiculo-anio').disabled    = true;
+  document.getElementById('vehiculo-vin-status').textContent = '';
+  document.getElementById('vehiculo-vin').style.borderColor = '';
   populateClienteSelect('vehiculo-cliente','');
   openModal('modal-vehiculo');
 }
@@ -1883,6 +1959,8 @@ function openInlineVehiculoForm() {
   document.getElementById('inline-vehiculo-modelo').disabled  = true;
   document.getElementById('inline-vehiculo-anio').innerHTML   = '<option value="">— Año —</option>';
   document.getElementById('inline-vehiculo-anio').disabled    = true;
+  document.getElementById('inline-vehiculo-vin-status').textContent = '';
+  document.getElementById('inline-vehiculo-vin').style.borderColor = '';
   openModal('modal-vehiculo-inline');
 }
 
