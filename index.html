@@ -680,11 +680,22 @@
       <div class="form-group">
         <label>Categoría</label>
         <select class="form-control" id="part-categoria">
-          <option>Mofles</option>
-          <option>Muelles</option>
-          <option>Suspension</option>
-          <option>Escape</option>
-          <option>Otro</option>
+          <option>Amortiguadores</option>
+          <option>Abrazaderas</option>
+          <option>Escape Maldonado</option>
+          <option>Escape EMSA</option>
+          <option>Muelles Sandoval</option>
+          <option>Muelles MAF</option>
+          <option>Muelles Katai</option>
+          <option>Bujes Polietileno y caucho</option>
+          <option>Suspension Manson</option>
+          <option>Suspension PHM</option>
+          <option>Suspension Otros</option>
+          <option>Partes para remolques</option>
+          <option>Birlos</option>
+          <option>Tornilleria</option>
+          <option>Grapas automotrices</option>
+          <option>Otros</option>
         </select>
       </div>
       <div class="form-group">
@@ -722,11 +733,22 @@
       <div class="form-group">
         <label>Categoría</label>
         <select class="form-control" id="ref-edit-categoria">
-          <option>Mofles</option>
-          <option>Muelles</option>
-          <option>Suspension</option>
-          <option>Escape</option>
-          <option>Otro</option>
+          <option>Amortiguadores</option>
+          <option>Abrazaderas</option>
+          <option>Escape Maldonado</option>
+          <option>Escape EMSA</option>
+          <option>Muelles Sandoval</option>
+          <option>Muelles MAF</option>
+          <option>Muelles Katai</option>
+          <option>Bujes Polietileno y caucho</option>
+          <option>Suspension Manson</option>
+          <option>Suspension PHM</option>
+          <option>Suspension Otros</option>
+          <option>Partes para remolques</option>
+          <option>Birlos</option>
+          <option>Tornilleria</option>
+          <option>Grapas automotrices</option>
+          <option>Otros</option>
         </select>
       </div>
 
@@ -1765,7 +1787,7 @@ function renderInventario() {
 function openNewPartModal() {
   document.getElementById('part-id').value = '';
   ['part-sku','part-nombre','part-precio'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('part-categoria').value = 'Mofles';
+  document.getElementById('part-categoria').value = 'Amortiguadores';
   openModal('modal-part');
 }
 
@@ -1799,7 +1821,7 @@ function editRefaccion(id) {
   document.getElementById('ref-edit-id').value = ref.id;
   document.getElementById('ref-edit-sku').value = ref.sku;
   document.getElementById('ref-edit-nombre').value = ref.nombre;
-  document.getElementById('ref-edit-categoria').value = ref.categoria || 'Mofles';
+  document.getElementById('ref-edit-categoria').value = ref.categoria || 'Amortiguadores';
   document.getElementById('ref-edit-precio').value = ref.precio || 0;
   document.getElementById('ref-edit-costo').value = ref.costo || 0;
   document.getElementById('ref-edit-stock').value = ref.stock || 0;
