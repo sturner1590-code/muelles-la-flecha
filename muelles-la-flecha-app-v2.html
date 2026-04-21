@@ -4,6 +4,22 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>Muelles y Mofles La Flecha</title>
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#991b1b">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="La Flecha">
+  <link rel="apple-touch-icon" href="Logo Muelles y Mofles.png">
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js')
+          .catch(err => console.warn('[SW]', err));
+      });
+    }
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
@@ -129,12 +145,31 @@
       .form-row { grid-template-columns: 1fr; }
       .search-bar { width: 100%; }
       .stat-grid { grid-template-columns: 1fr 1fr; }
-      .modal { max-width: 95vw; }
+      .modal { max-width: 96vw; max-height: 94vh; }
+      .modal-body { padding: 14px; }
+      .modal-footer { padding: 12px 14px; }
+      /* Section header apila en móvil */
+      .section-header { flex-direction: column; align-items: flex-start; }
+      .section-header .btn-group { width: 100%; }
+      .section-header .search-bar { width: 100%; }
+      /* Touch targets más grandes para nav */
+      .nav-item { padding: 13px 16px; }
+      /* Tablas: columnas secundarias ocultas en móvil */
+      .hide-mobile { display: none !important; }
+      /* Botones de acción más fáciles de tocar */
+      .btn-icon { padding: 8px 10px; }
     }
     @media (max-width: 480px) {
       .stat-grid { grid-template-columns: 1fr; }
       .topbar h2 { font-size: 15px; }
-      .content { padding: 12px; }
+      .content { padding: 10px; }
+      /* Reducir padding de cards en pantalla muy chica */
+      .card { padding: 12px; }
+      /* Botones principales en ancho completo en formularios */
+      .modal-footer { flex-direction: column-reverse; gap: 8px; }
+      .modal-footer .btn { width: 100%; justify-content: center; }
+      /* Encabezado de orden detail en 1 columna */
+      #detalle-body .info-grid { grid-template-columns: 1fr !important; }
     }
     .page { display: none; }
     .page.active { display: block; }
@@ -246,7 +281,7 @@
         </div>
       </div>
       <div class="table-wrap">
-        <table><thead><tr><th>Marca/Modelo</th><th>Año</th><th>Color</th><th>Cliente</th><th>Núm. Unidad</th><th>VIN/Placa</th><th>Acciones</th></tr></thead>
+        <table><thead><tr><th>Marca/Modelo</th><th>Año</th><th class="hide-mobile">Color</th><th>Cliente</th><th class="hide-mobile">Núm. Unidad</th><th class="hide-mobile">VIN/Placa</th><th>Acciones</th></tr></thead>
           <tbody id="tbody-vehiculos"></tbody></table>
       </div>
     </section>
@@ -267,7 +302,7 @@
         <span class="filter-chip" data-status="completado" onclick="setOrdenFilter('completado')">Completado</span>
       </div>
       <div class="table-wrap">
-        <table><thead><tr><th>#</th><th>Vehiculo</th><th>Cliente</th><th>Estado</th><th>Prioridad</th><th>Material</th><th>M.O.</th><th>Total</th><th>Fecha Creación</th><th>Acciones</th></tr></thead>
+        <table><thead><tr><th>#</th><th>Vehiculo</th><th class="hide-mobile">Cliente</th><th>Estado</th><th class="hide-mobile">Prioridad</th><th class="hide-mobile">Material</th><th class="hide-mobile">M.O.</th><th>Total</th><th class="hide-mobile">Fecha Creación</th><th>Acciones</th></tr></thead>
           <tbody id="tbody-ordenes"></tbody></table>
       </div>
     </section>
@@ -1190,10 +1225,10 @@ function renderVehiculos() {
         return `<tr>
           <td><strong>${v.marca} ${v.modelo}</strong></td>
           <td>${v.anio||'—'}</td>
-          <td>${v.color||'—'}</td>
+          <td class="hide-mobile">${v.color||'—'}</td>
           <td>${cliente}</td>
-          <td>${v.numeroUnidad||'—'}</td>
-          <td>${vinPlaca}</td>
+          <td class="hide-mobile">${v.numeroUnidad||'—'}</td>
+          <td class="hide-mobile">${vinPlaca}</td>
           <td><button class="btn btn-outline btn-sm btn-icon" onclick="editVehiculo('${v.id}')">✎</button><button class="btn btn-danger btn-sm btn-icon" onclick="deleteVehiculo('${v.id}')">🗑</button></td>
         </tr>`;
       }).join('')
@@ -1458,10 +1493,11 @@ function renderOrdenes() {
         const prioClass = (o.prioridad === 'alta' || o.prioridad === 'urgente') ? ` prioridad-${o.prioridad}` : '';
         return `<tr style="cursor:pointer" class="${prioClass}" onclick="viewOrden('${o.id}')">
           <td><strong>#${num}</strong></td>
-          <td>${getVehiculoLabel(o.vehiculoId)}</td><td>${getClienteName(o.clienteId)}</td>
+          <td>${getVehiculoLabel(o.vehiculoId)}</td>
+          <td class="hide-mobile">${getClienteName(o.clienteId)}</td>
           <td>${badge(STATUS_LABELS,o.estado)}</td>
-          <td>${badge(PRIORITY_LABELS, o.prioridad||'normal')}</td>
-          <td>${fmt(totalMat)}</td><td>${fmt(totalMano)}</td>
+          <td class="hide-mobile">${badge(PRIORITY_LABELS, o.prioridad||'normal')}</td>
+          <td class="hide-mobile">${fmt(totalMat)}</td><td class="hide-mobile">${fmt(totalMano)}</td>
           <td><strong>${fmt(total)}</strong></td>
           <td style="font-size:12px;white-space:nowrap">${fmtDateTime(o.creadoEn)}</td>
           <td onclick="event.stopPropagation()">
