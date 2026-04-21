@@ -1491,45 +1491,6 @@ function deleteOrden(id) {
   toast('Orden eliminada.','info');
 }
 
-function lookupRefaccionBySku(idx, sku) {
-  if (!sku) {
-    currentOrdenLineas[idx].nombre = '';
-    currentOrdenLineas[idx].partId = '';
-    currentOrdenLineas[idx].precioUnitario = 0;
-    renderRefaccionesTable();
-    return;
-  }
-
-  const skuLower = sku.toLowerCase().trim();
-  const refacciones = DB.refacciones();
-
-  // Buscar por SKU exacto primero
-  let matches = refacciones.filter(r => r.sku.toLowerCase() === skuLower);
-
-  // Si no hay coincidencia exacta, buscar por nombre parcial
-  if (matches.length === 0) {
-    matches = refacciones.filter(r => r.nombre.toLowerCase().includes(skuLower));
-  }
-
-  if (matches.length === 0) {
-    toast(`SKU/Nombre "${sku}" no encontrado.`, 'danger');
-    currentOrdenLineas[idx].nombre = '';
-    currentOrdenLineas[idx].partId = '';
-  } else if (matches.length === 1) {
-    const ref = matches[0];
-    currentOrdenLineas[idx].partId = ref.id;
-    currentOrdenLineas[idx].nombre = ref.nombre;
-    currentOrdenLineas[idx].precioUnitario = ref.precio;
-    currentOrdenLineas[idx].subtotal = ref.precio * currentOrdenLineas[idx].cantidad;
-    toast(`"${ref.nombre}" agregado.`, 'success');
-  } else {
-    toast(`Múltiples coincidencias encontradas. Sé más específico.`, 'warning');
-    currentOrdenLineas[idx].nombre = `${matches.length} coincidencias: ${matches.map(m => m.nombre).join(', ')}`;
-  }
-
-  renderRefaccionesTable();
-  calculateOrderTotals();
-}
 
 /* ═══════════════════════════════════════════════════════════════ REFACCIONES DINAMICAS */
 function addRefaccionLine() {
@@ -1624,7 +1585,7 @@ function lookupRefaccionBySku(idx) {
     skuInput.style.background  = '';
     return;
   }
-  const ref = DB.refacciones().find(r => r.sku && r.sku.toLowerCase() === skuVal.toLowerCase());
+  const ref = DB.refacciones().find(r => r.sku && String(r.sku).toLowerCase() === skuVal.toLowerCase());
   if (ref) {
     const linea = currentOrdenLineas[idx];
     linea.partId         = ref.id;
