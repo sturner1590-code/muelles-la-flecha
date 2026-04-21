@@ -490,11 +490,12 @@
         <table class="refacciones-table" id="refacciones-table">
           <thead>
             <tr>
-              <th>Refaccion</th>
-              <th>Cant.</th>
-              <th>Precio Unit.</th>
-              <th>Subtotal</th>
-              <th>Accion</th>
+              <th style="width:105px">SKU</th>
+              <th>Refaccion / Categoría</th>
+              <th style="width:68px">Cant.</th>
+              <th style="width:100px">Precio Unit.</th>
+              <th style="width:88px">Subtotal</th>
+              <th style="width:38px">Accion</th>
             </tr>
           </thead>
           <tbody id="refacciones-tbody">
@@ -1512,11 +1513,8 @@ function lookupRefaccionBySku(idx, sku) {
 function addRefaccionLine() {
   currentOrdenLineas.push({
     id: DB.uid(),
-    partId: '',
-    nombre: '',
-    cantidad: 1,
-    precioUnitario: 0,
-    subtotal: 0
+    partId: '', sku: '', nombre: '', categoria: '',
+    cantidad: 1, precioUnitario: 0, subtotal: 0
   });
   renderRefaccionesTable();
   calculateOrderTotals();
@@ -1534,7 +1532,9 @@ function updateRefaccionLine(idx, field, value) {
     const ref = DB.refacciones().find(r=>r.id===value);
     if (ref) {
       linea.partId = value;
+      linea.sku = ref.sku || '';
       linea.nombre = ref.nombre;
+      linea.categoria = ref.categoria || '';
       linea.precioUnitario = ref.precio;
       linea.subtotal = (ref.precio * (+linea.cantidad||1));
     }
@@ -1550,27 +1550,37 @@ function updateRefaccionLine(idx, field, value) {
 }
 
 function renderRefaccionesTable() {
-  const refacciones = DB.refacciones();
-
   let html = '';
   currentOrdenLineas.forEach((linea, idx) => {
     const dataListId = `ref-list-${idx}`;
-    const inputId = `ref-input-${idx}`;
-    const safeName = (linea.nombre || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const safeName = (linea.nombre || '').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const safeSku  = (linea.sku   || '').replace(/"/g,'&quot;');
+    const cat = linea.categoria ? `<div id="ref-cat-${idx}" style="font-size:10px;color:var(--muted);margin-top:2px">${linea.categoria}</div>` : `<div id="ref-cat-${idx}"></div>`;
 
     html += `<tr>
       <td>
-        <input type="text" class="form-control ref-autocomplete" id="${inputId}" list="${dataListId}" value="${safeName}" onchange="selectRefaccionFromDatalist(${idx})" oninput="filterRefacciones(${idx},'${dataListId}')" placeholder="Buscar refacción..." style="font-size:12px">
-        <datalist id="${dataListId}"></datalist>
+        <input type="text" id="ref-sku-${idx}" value="${safeSku}"
+               oninput="lookupRefaccionBySku(${idx})"
+               placeholder="MFL-001"
+               style="font-size:12px;text-transform:uppercase;width:100%;padding:4px;border:1px solid var(--border);border-radius:4px">
       </td>
-      <td><input type="number" class="form-control" value="${linea.cantidad}" onchange="updateRefaccionLine(${idx},'cantidad',this.value)" min="1" style="font-size:12px"></td>
-      <td><input type="number" class="form-control" value="${linea.precioUnitario}" onchange="updateRefaccionLine(${idx},'precioUnitario',this.value)" step="0.01" style="font-size:12px"></td>
-      <td><strong>${fmt(linea.subtotal)}</strong></td>
+      <td>
+        <input type="text" class="form-control ref-autocomplete" id="ref-input-${idx}" list="${dataListId}"
+               value="${safeName}"
+               onchange="selectRefaccionFromDatalist(${idx})"
+               oninput="filterRefacciones(${idx},'${dataListId}')"
+               placeholder="Buscar refacción..." style="font-size:12px">
+        <datalist id="${dataListId}"></datalist>
+        ${cat}
+      </td>
+      <td><input type="number" id="ref-cant-${idx}" class="form-control" value="${linea.cantidad}" onchange="updateRefaccionLine(${idx},'cantidad',this.value)" min="1" style="font-size:12px"></td>
+      <td><input type="number" id="ref-precio-${idx}" class="form-control" value="${linea.precioUnitario}" onchange="updateRefaccionLine(${idx},'precioUnitario',this.value)" step="0.01" style="font-size:12px"></td>
+      <td id="ref-subtotal-${idx}"><strong>${fmt(linea.subtotal)}</strong></td>
       <td><button class="btn btn-danger btn-sm btn-icon" onclick="removeRefaccionLine(${idx})">🗑</button></td>
     </tr>`;
   });
 
-  document.getElementById('refacciones-tbody').innerHTML = html || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Sin refacciones agregadas</td></tr>';
+  document.getElementById('refacciones-tbody').innerHTML = html || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">Sin refacciones agregadas</td></tr>';
 }
 
 function calculateOrderTotals() {
@@ -1582,6 +1592,42 @@ function calculateOrderTotals() {
   document.getElementById('orden-total-material').textContent = fmt(totalMat);
   document.getElementById('orden-total-mano').textContent = fmt(manoObra);
   document.getElementById('orden-total-final').textContent = fmt(total);
+}
+
+function lookupRefaccionBySku(idx) {
+  const skuInput = document.getElementById(`ref-sku-${idx}`);
+  const skuVal = skuInput.value.trim();
+  if (!skuVal) {
+    skuInput.style.borderColor = '';
+    skuInput.style.background  = '';
+    return;
+  }
+  const ref = DB.refacciones().find(r => r.sku && r.sku.toLowerCase() === skuVal.toLowerCase());
+  if (ref) {
+    const linea = currentOrdenLineas[idx];
+    linea.partId         = ref.id;
+    linea.sku            = ref.sku;
+    linea.nombre         = ref.nombre;
+    linea.categoria      = ref.categoria || '';
+    linea.precioUnitario = ref.precio;
+    linea.subtotal       = ref.precio * (+linea.cantidad || 1);
+    // Actualizar inputs en el DOM sin re-renderizar (conserva el foco en SKU)
+    const nombreEl   = document.getElementById(`ref-input-${idx}`);
+    const precioEl   = document.getElementById(`ref-precio-${idx}`);
+    const subtotalEl = document.getElementById(`ref-subtotal-${idx}`);
+    const catEl      = document.getElementById(`ref-cat-${idx}`);
+    if (nombreEl)   nombreEl.value   = ref.nombre;
+    if (precioEl)   precioEl.value   = ref.precio;
+    if (subtotalEl) subtotalEl.innerHTML = `<strong>${fmt(linea.subtotal)}</strong>`;
+    if (catEl)      catEl.textContent = ref.categoria || '';
+    // Feedback visual: borde verde
+    skuInput.style.borderColor = 'var(--success)';
+    skuInput.style.background  = '#f0fdf4';
+    calculateOrderTotals();
+  } else {
+    skuInput.style.borderColor = '';
+    skuInput.style.background  = '';
+  }
 }
 
 function filterRefacciones(idx, datalistId) {
