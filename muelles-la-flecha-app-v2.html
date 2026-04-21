@@ -142,6 +142,13 @@
     .filter-chip { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; border: 1.5px solid var(--border); background: var(--white); cursor: pointer; transition: background .15s, color .15s; }
     .filter-chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    /* ── IMPRESIÓN ── */
+    @media print {
+      body * { visibility: hidden; }
+      #print-area, #print-area * { visibility: visible; }
+      #print-area { position: fixed; inset: 0; padding: 24px; font-size: 13px; background: #fff; }
+      #print-area .no-print { display: none !important; }
+    }
   </style>
 </head>
 <body>
@@ -657,6 +664,20 @@
       <button class="btn btn-outline" onclick="closeModal('modal-vehiculo-inline')">Cancelar</button>
       <button class="btn btn-primary" onclick="saveInlineVehiculo()">Crear y Usar</button>
     </div>
+  </div>
+</div>
+
+<!-- MODAL DETALLE ORDEN -->
+<div class="modal-backdrop" id="modal-orden-detalle">
+  <div class="modal large">
+    <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between">
+      <h3 id="detalle-titulo">Orden #0001</h3>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-secondary btn-sm" onclick="printOrden()">🖨️ Imprimir / PDF</button>
+        <button class="modal-close" onclick="closeModal('modal-orden-detalle')">✕</button>
+      </div>
+    </div>
+    <div class="modal-body" id="detalle-body"></div>
   </div>
 </div>
 
@@ -1340,15 +1361,119 @@ function renderOrdenes() {
         const totalMat = +o.totalMaterial||0;
         const totalMano = +o.manoObra||0;
         const total = totalMat + totalMano;
-        return `<tr><td><strong>#${String(rows.length-i).padStart(4,'0')}</strong></td>
+        const num = String(rows.length-i).padStart(4,'0');
+        return `<tr style="cursor:pointer" onclick="viewOrden('${o.id}')">
+          <td><strong>#${num}</strong></td>
           <td>${getVehiculoLabel(o.vehiculoId)}</td><td>${getClienteName(o.clienteId)}</td>
           <td>${badge(STATUS_LABELS,o.estado)}</td>
           <td>${fmt(totalMat)}</td><td>${fmt(totalMano)}</td>
-          <td>${fmt(total)}</td><td>${fmtDate(o.creadoEn)}</td>
-          <td><button class="btn btn-outline btn-sm btn-icon" onclick="editOrden('${o.id}')">✎</button>
-          <button class="btn btn-danger btn-sm btn-icon" onclick="deleteOrden('${o.id}')">🗑</button></td></tr>`;
+          <td><strong>${fmt(total)}</strong></td><td>${fmtDate(o.creadoEn)}</td>
+          <td onclick="event.stopPropagation()">
+            <button class="btn btn-outline btn-sm btn-icon" onclick="editOrden('${o.id}')">✎</button>
+            <button class="btn btn-danger btn-sm btn-icon" onclick="deleteOrden('${o.id}')">🗑</button>
+          </td></tr>`;
       }).join('')
     : `<tr><td colspan="9" class="empty-state">Sin ordenes</td></tr>`;
+}
+
+let _printOrdenId = null;
+
+function viewOrden(id) {
+  const o = DB.ordenes().find(o => o.id === id);
+  if (!o) return;
+  _printOrdenId = id;
+
+  const cliente  = getClienteName(o.clienteId);
+  const vehiculo = getVehiculoLabel(o.vehiculoId);
+  const [badgeClass, badgeLabel] = STATUS_LABELS[o.estado] || ['badge-gray', o.estado];
+  const totalMat  = +o.totalMaterial || 0;
+  const totalMano = +o.manoObra || 0;
+  const total     = totalMat + totalMano;
+
+  const lineasHtml = (o.lineas && o.lineas.length)
+    ? `<table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="background:#f3f4f6">
+          <th style="padding:8px;text-align:left;border-bottom:1px solid #e5e7eb">SKU</th>
+          <th style="padding:8px;text-align:left;border-bottom:1px solid #e5e7eb">Descripción</th>
+          <th style="padding:8px;text-align:center;border-bottom:1px solid #e5e7eb">Cant.</th>
+          <th style="padding:8px;text-align:right;border-bottom:1px solid #e5e7eb">Precio Unit.</th>
+          <th style="padding:8px;text-align:right;border-bottom:1px solid #e5e7eb">Subtotal</th>
+        </tr></thead>
+        <tbody>${o.lineas.map(l => `<tr>
+          <td style="padding:7px 8px;border-bottom:1px solid #f3f4f6;color:#6b7280;font-size:12px">${l.sku||'—'}</td>
+          <td style="padding:7px 8px;border-bottom:1px solid #f3f4f6">${l.nombre||'—'}</td>
+          <td style="padding:7px 8px;border-bottom:1px solid #f3f4f6;text-align:center">${l.cantidad}</td>
+          <td style="padding:7px 8px;border-bottom:1px solid #f3f4f6;text-align:right">${fmt(l.precioUnitario)}</td>
+          <td style="padding:7px 8px;border-bottom:1px solid #f3f4f6;text-align:right"><strong>${fmt(l.subtotal)}</strong></td>
+        </tr>`).join('')}</tbody>
+      </table>`
+    : `<p style="color:#9ca3af;text-align:center;padding:16px">Sin refacciones agregadas</p>`;
+
+  document.getElementById('detalle-titulo').textContent = `Orden #${o.id.slice(-4).toUpperCase()}`;
+  document.getElementById('detalle-body').innerHTML = `
+    <div id="print-area">
+      <!-- Encabezado de impresión -->
+      <div style="text-align:center;margin-bottom:20px;display:none" class="print-header">
+        <div style="font-size:22px;font-weight:700;color:#991b1b">Muelles y Mofles La Flecha</div>
+        <div style="font-size:13px;color:#6b7280;margin-top:4px">Orden de Trabajo</div>
+        <hr style="margin:12px 0;border-color:#e5e7eb">
+      </div>
+      <!-- Info principal -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+        <div style="background:#f9fafb;border-radius:8px;padding:14px">
+          <div style="font-size:11px;color:#6b7280;font-weight:600;text-transform:uppercase;margin-bottom:8px">Datos del Servicio</div>
+          <div style="margin-bottom:6px"><span style="color:#6b7280;font-size:12px">Folio:</span> <strong>#${o.id.slice(-4).toUpperCase()}</strong></div>
+          <div style="margin-bottom:6px"><span style="color:#6b7280;font-size:12px">Fecha:</span> ${fmtDate(o.creadoEn)}</div>
+          <div style="margin-bottom:6px"><span style="color:#6b7280;font-size:12px">Estado:</span> <span class="badge ${badgeClass}">${badgeLabel}</span></div>
+          <div><span style="color:#6b7280;font-size:12px">Prioridad:</span> ${o.prioridad||'normal'}</div>
+        </div>
+        <div style="background:#f9fafb;border-radius:8px;padding:14px">
+          <div style="font-size:11px;color:#6b7280;font-weight:600;text-transform:uppercase;margin-bottom:8px">Cliente y Vehículo</div>
+          <div style="margin-bottom:6px"><span style="color:#6b7280;font-size:12px">Cliente:</span> <strong>${cliente}</strong></div>
+          <div><span style="color:#6b7280;font-size:12px">Vehículo:</span> ${vehiculo}</div>
+        </div>
+      </div>
+      <!-- Descripción -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:11px;color:#6b7280;font-weight:600;text-transform:uppercase;margin-bottom:6px">Descripción del Trabajo</div>
+        <div style="background:#f9fafb;border-radius:8px;padding:12px;font-size:13px">${o.descripcion||'—'}</div>
+      </div>
+      <!-- Refacciones -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:11px;color:#6b7280;font-weight:600;text-transform:uppercase;margin-bottom:8px">Refacciones y Piezas</div>
+        <div style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">${lineasHtml}</div>
+      </div>
+      <!-- Totales -->
+      <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+        <div style="background:#f9fafb;border-radius:8px;padding:14px;min-width:240px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:13px">
+            <span style="color:#6b7280">Material:</span><span>${fmt(totalMat)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:13px">
+            <span style="color:#6b7280">Mano de Obra:</span><span>${fmt(totalMano)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;border-top:2px solid #e5e7eb;padding-top:10px">
+            <span>Total:</span><span style="color:#dc2626">${fmt(total)}</span>
+          </div>
+        </div>
+      </div>
+      ${o.notas ? `<div style="margin-bottom:8px">
+        <div style="font-size:11px;color:#6b7280;font-weight:600;text-transform:uppercase;margin-bottom:6px">Notas</div>
+        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;font-size:13px">${o.notas}</div>
+      </div>` : ''}
+    </div>`;
+
+  // Mostrar encabezado solo al imprimir
+  document.querySelector('#print-area .print-header').style.display = 'none';
+  openModal('modal-orden-detalle');
+}
+
+function printOrden() {
+  // Mostrar encabezado de empresa al imprimir
+  const header = document.querySelector('#print-area .print-header');
+  if (header) header.style.display = 'block';
+  window.print();
+  setTimeout(() => { if (header) header.style.display = 'none'; }, 500);
 }
 
 function openNewOrdenModal() {
@@ -1471,7 +1596,7 @@ function editOrden(id) {
 }
 
 function saveOrden() {
-  const clienteId = document.getElementById('orden-cliente').value;
+  const clienteId = resolveClienteId('orden-cliente');
   const vehInput = document.getElementById('orden-vehiculo');
   const vehiculoId = vehInput.dataset.vehiculoId || vehInput.value;
   const descripcion = document.getElementById('orden-descripcion').value.trim();
