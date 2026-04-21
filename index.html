@@ -1071,13 +1071,15 @@ function handleFileImport() {
       showImportPreview('clientes', importData);
     } else if (importType === 'refacciones') {
       importData = rows.map(r => ({
-        sku: r.SKU || r['sku'] || r['Código'] || r['codigo'] || '',
-        nombre: r.Nombre || r['nombre'] || r['Refaccion'] || r['refaccion'] || r.Descripción || r['descripción'] || '',
-        categoria: r.Categoría || r['categoria'] || r['Categoria'] || '',
-        precio: r.Precio || r['precio'] || r['Costo'] || r['costo'] || '0',
-        stock: r.Stock || r['stock'] || '0',
-        costo: r.Costo || r['costo'] || '0',
-        minimo: r.Mínimo || r['minimo'] || r['Mínimo'] || '0'
+        sku:      String(r.SKU || r['sku'] || r['Código'] || r['codigo'] || r['Clave'] || r['clave'] || '').trim(),
+        nombre:   String(r.Nombre || r['nombre'] || r['NOMBRE'] ||
+                         r.DESCRIPCION || r['descripcion'] || r['Descripcion'] || r['Descripción'] || r['descripción'] ||
+                         r.Description || r['description'] || '').trim(),
+        categoria:String(r.Categoría || r['categoria'] || r['Categoria'] || r['CATEGORIA'] || r['Tipo'] || r['tipo'] || '').trim(),
+        precio:   r.Precio || r['precio'] || r['PRECIO'] || r['Precio2'] || r['P.Venta'] || r['Venta'] || r['venta'] || '0',
+        stock:    r.Stock   || r['stock']   || r['STOCK']   || '0',
+        costo:    r.Costo   || r['costo']   || r['COSTO']   || '0',
+        minimo:   r.Mínimo  || r['minimo']  || r['Minimo']  || r['MINIMO'] || '0'
       })).filter(r => r.sku || r.nombre);
       console.log('Refacciones parseadas:', importData);
       showImportPreview('refacciones', importData);
