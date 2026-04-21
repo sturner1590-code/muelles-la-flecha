@@ -1537,7 +1537,8 @@ function updateRefaccionLine(idx, field, value) {
 function renderRefaccionesTable() {
   let html = '';
   currentOrdenLineas.forEach((linea, idx) => {
-    const dataListId = `ref-list-${idx}`;
+    const dataListId    = `ref-list-${idx}`;
+    const skuListId     = `ref-sku-list-${idx}`;
     const safeName = (linea.nombre || '').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     const safeSku  = (linea.sku   || '').replace(/"/g,'&quot;');
     const cat = linea.categoria ? `<div id="ref-cat-${idx}" style="font-size:10px;color:var(--muted);margin-top:2px">${linea.categoria}</div>` : `<div id="ref-cat-${idx}"></div>`;
@@ -1545,9 +1546,11 @@ function renderRefaccionesTable() {
     html += `<tr>
       <td>
         <input type="text" id="ref-sku-${idx}" value="${safeSku}"
+               list="${skuListId}"
                oninput="lookupRefaccionBySku(${idx})"
-               placeholder="MFL-001"
-               style="font-size:12px;text-transform:uppercase;width:100%;padding:4px;border:1px solid var(--border);border-radius:4px">
+               placeholder="Ej: 11829"
+               style="font-size:12px;width:100%;padding:4px;border:1px solid var(--border);border-radius:4px">
+        <datalist id="${skuListId}"></datalist>
       </td>
       <td>
         <input type="text" class="form-control ref-autocomplete" id="ref-input-${idx}" list="${dataListId}"
@@ -1580,38 +1583,56 @@ function calculateOrderTotals() {
 }
 
 function lookupRefaccionBySku(idx) {
-  const skuInput = document.getElementById(`ref-sku-${idx}`);
-  const skuVal = skuInput.value.trim();
+  const skuInput  = document.getElementById(`ref-sku-${idx}`);
+  const skuList   = document.getElementById(`ref-sku-list-${idx}`);
+  const skuVal    = skuInput.value.trim();
+
   if (!skuVal) {
     skuInput.style.borderColor = '';
     skuInput.style.background  = '';
+    if (skuList) skuList.innerHTML = '';
     return;
   }
-  const ref = DB.refacciones().find(r => r.sku && String(r.sku).toLowerCase() === skuVal.toLowerCase());
+
+  const refacciones = DB.refacciones();
+
+  // Llenar datalist con SKUs que empiecen con lo escrito
+  if (skuList) {
+    const matches = refacciones
+      .filter(r => r.sku && String(r.sku).toLowerCase().startsWith(skuVal.toLowerCase()))
+      .slice(0, 20);
+    skuList.innerHTML = matches
+      .map(r => `<option value="${String(r.sku)}">${r.nombre}</option>`)
+      .join('');
+  }
+
+  // Buscar coincidencia exacta
+  const ref = refacciones.find(r => r.sku && String(r.sku).toLowerCase() === skuVal.toLowerCase());
   if (ref) {
     const linea = currentOrdenLineas[idx];
     linea.partId         = ref.id;
-    linea.sku            = ref.sku;
+    linea.sku            = String(ref.sku);
     linea.nombre         = ref.nombre;
     linea.categoria      = ref.categoria || '';
-    linea.precioUnitario = ref.precio;
-    linea.subtotal       = ref.precio * (+linea.cantidad || 1);
-    // Actualizar inputs en el DOM sin re-renderizar (conserva el foco en SKU)
+    linea.precioUnitario = +ref.precio || 0;
+    linea.subtotal       = linea.precioUnitario * (+linea.cantidad || 1);
+
     const nombreEl   = document.getElementById(`ref-input-${idx}`);
     const precioEl   = document.getElementById(`ref-precio-${idx}`);
     const subtotalEl = document.getElementById(`ref-subtotal-${idx}`);
     const catEl      = document.getElementById(`ref-cat-${idx}`);
-    if (nombreEl)   nombreEl.value   = ref.nombre;
-    if (precioEl)   precioEl.value   = ref.precio;
-    if (subtotalEl) subtotalEl.innerHTML = `<strong>${fmt(linea.subtotal)}</strong>`;
-    if (catEl)      catEl.textContent = ref.categoria || '';
-    // Feedback visual: borde verde
+    if (nombreEl)   nombreEl.value            = ref.nombre;
+    if (precioEl)   precioEl.value            = +ref.precio || 0;
+    if (subtotalEl) subtotalEl.innerHTML      = `<strong>${fmt(linea.subtotal)}</strong>`;
+    if (catEl)      catEl.textContent         = ref.categoria || '';
+
     skuInput.style.borderColor = 'var(--success)';
     skuInput.style.background  = '#f0fdf4';
     calculateOrderTotals();
   } else {
-    skuInput.style.borderColor = '';
-    skuInput.style.background  = '';
+    // Feedback rojo si ya escribió suficiente y no hay coincidencia exacta
+    skuInput.style.borderColor = skuVal.length >= 3 ? 'var(--danger)' : '';
+    skuInput.style.background  = skuVal.length >= 3 ? '#fff5f5'       : '';
   }
 }
 
