@@ -315,6 +315,7 @@
           <input type="text" class="search-bar" placeholder="Refaccion..." id="search-inventario" oninput="renderInventario()">
           <button class="btn btn-primary" onclick="openNewPartModal()">+ Nueva</button>
           <button class="btn btn-secondary" onclick="triggerImportRefacciones()">📥 Importar Excel</button>
+          <button class="btn btn-outline" onclick="verificarInventario()">🔍 Verificar</button>
         </div>
       </div>
       <div class="table-wrap">
@@ -1187,30 +1188,165 @@ function showImportPreview(type, data) {
   openModal('modal-import-preview');
 }
 
-function confirmImport() {
-  if (document.getElementById('hidden-file-input').dataset.type === 'clientes') {
-    const clientes = DB.clientes();
+async function confirmImport() {
+  const type = document.getElementById('hidden-file-input').dataset.type;
+  closeModal('modal-import-preview');
+
+  if (type === 'clientes') {
     const newClientes = importData.map(r => ({
-      id: DB.uid(),
-      nombre: r.nombre, telefono: r.telefono, email: r.email,
-      razonSocial: r.razonSocial, tipoCliente: r.tipoCliente
+      id: DB.uid(), nombre: r.nombre, telefono: r.telefono,
+      email: r.email, razonSocial: r.razonSocial, tipoCliente: r.tipoCliente
     }));
-    DB.saveClientes([...clientes, ...newClientes]);
+    DB.saveClientes([...DB.clientes(), ...newClientes]);
     renderClientes();
     toast(`${newClientes.length} cliente(s) importado(s).`);
-  } else if (document.getElementById('hidden-file-input').dataset.type === 'refacciones') {
-    const refacciones = DB.refacciones();
-    const newRefacciones = importData.map(r => ({
-      id: DB.uid(),
-      sku: r.sku, nombre: r.nombre, categoria: r.categoria, precio: +r.precio,
-      stock: +r.stock || 0, costo: +r.costo || 0, minimo: +r.minimo || 0
-    }));
-    DB.saveRefacciones([...refacciones, ...newRefacciones]);
-    renderInventario();
-    toast(`${newRefacciones.length} refaccion(es) importada(s).`);
+    importData = [];
+    return;
   }
-  closeModal('modal-import-preview');
+
+  if (type !== 'refacciones') { importData = []; return; }
+
+  // ── IMPORTACIÓN DE REFACCIONES con progreso y verificación ──
+  const BATCH = 400; // conservador para evitar límites
+  const total = importData.length;
+
+  // Construir objetos con ID, preservando SKUs duplicados
+  const existingBySku = {};
+  DB.refacciones().forEach(r => { if (r.sku) existingBySku[String(r.sku).toLowerCase()] = r.id; });
+
+  const newRefacciones = importData.map(r => {
+    const skuKey = r.sku ? String(r.sku).toLowerCase() : null;
+    return {
+      id: (skuKey && existingBySku[skuKey]) ? existingBySku[skuKey] : DB.uid(),
+      sku: r.sku, nombre: r.nombre, categoria: r.categoria,
+      precio: +r.precio, stock: +r.stock || 0, costo: +r.costo || 0, minimo: +r.minimo || 0
+    };
+  });
+
+  // Actualizar caché local inmediatamente
+  const existingIds = new Set(DB.refacciones().map(r => r.id));
+  const merged = [...DB.refacciones().filter(r => !newRefacciones.find(n => n.id === r.id)), ...newRefacciones];
+  CACHE.refacciones = merged;
+  renderInventario();
   importData = [];
+
+  const totalBatches = Math.ceil(total / BATCH);
+  toast(`⏳ Enviando lote 1 de ${totalBatches}...`, 'info');
+
+  let successCount = 0;
+  const failedItems = [];
+
+  for (let i = 0; i < newRefacciones.length; i += BATCH) {
+    const batchNum = Math.floor(i / BATCH) + 1;
+    const chunk = newRefacciones.slice(i, i + BATCH);
+
+    // Primer intento
+    let { error } = await sb.from('refacciones').upsert(chunk);
+
+    // Reintento automático si falla
+    if (error) {
+      console.warn(`[Import] Lote ${batchNum} falló, reintentando...`, error.message);
+      await new Promise(r => setTimeout(r, 1200));
+      ({ error } = await sb.from('refacciones').upsert(chunk));
+    }
+
+    if (error) {
+      console.error(`[Import] Lote ${batchNum} FALLÓ tras reintento:`, error.message);
+      failedItems.push(...chunk);
+    } else {
+      successCount += chunk.length;
+    }
+
+    if (batchNum < totalBatches) {
+      toast(`⏳ Enviando lote ${batchNum + 1} de ${totalBatches}...`, 'info');
+    }
+  }
+
+  // Verificación final contra Supabase
+  const { count: supabaseCount } = await sb.from('refacciones').select('id', { count: 'exact', head: true });
+
+  // Mostrar reporte
+  _mostrarReporteImport({ total, successCount, failedItems, supabaseCount });
+}
+
+function _mostrarReporteImport({ total, successCount, failedItems, supabaseCount }) {
+  const ok = failedItems.length === 0;
+  const coincide = supabaseCount === CACHE.refacciones.length;
+
+  let html = `
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:40px">${ok ? '✅' : '⚠️'}</div>
+      <div style="font-size:18px;font-weight:700;margin-top:8px;color:${ok ? '#057a55' : '#c27803'}">
+        ${ok ? 'Importación completada' : 'Importación con errores'}
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;text-align:center">
+      <div style="background:#f9fafb;border-radius:8px;padding:12px">
+        <div style="font-size:22px;font-weight:700;color:#1e3a8a">${total}</div>
+        <div style="font-size:11px;color:#6b7280">En Excel</div>
+      </div>
+      <div style="background:${ok?'#d1fae5':'#fef3c7'};border-radius:8px;padding:12px">
+        <div style="font-size:22px;font-weight:700;color:${ok?'#057a55':'#c27803'}">${successCount}</div>
+        <div style="font-size:11px;color:#6b7280">Guardadas OK</div>
+      </div>
+      <div style="background:${failedItems.length?'#fee2e2':'#f9fafb'};border-radius:8px;padding:12px">
+        <div style="font-size:22px;font-weight:700;color:${failedItems.length?'#dc2626':'#6b7280'}">${failedItems.length}</div>
+        <div style="font-size:11px;color:#6b7280">Fallidas</div>
+      </div>
+    </div>
+    <div style="background:#f9fafb;border-radius:8px;padding:10px;font-size:13px;margin-bottom:${failedItems.length?'12px':'0'}">
+      <span style="color:#6b7280">Supabase total:</span> <strong>${supabaseCount ?? '?'}</strong> refacciones
+      ${coincide ? ' <span style="color:#057a55">✓ coincide con caché local</span>' : ' <span style="color:#c27803">⚠️ diferente al caché local ('+CACHE.refacciones.length+')</span>'}
+    </div>`;
+
+  if (failedItems.length) {
+    const skuList = failedItems.map(r => r.sku || r.nombre || r.id).join(', ');
+    html += `
+    <div style="margin-top:12px">
+      <div style="font-size:12px;font-weight:600;color:#dc2626;margin-bottom:6px">SKUs / artículos que fallaron:</div>
+      <div style="background:#fff5f5;border:1px solid #fecaca;border-radius:8px;padding:10px;font-size:12px;font-family:monospace;max-height:120px;overflow-y:auto;word-break:break-all">${skuList}</div>
+      <button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="_reintentarFallidas()">🔄 Reintentar fallidas</button>
+    </div>`;
+    window._failedImportItems = failedItems;
+  }
+
+  // Mostrar en modal de detalle reutilizado
+  document.getElementById('detalle-titulo').textContent = 'Reporte de Importación';
+  document.getElementById('detalle-body').innerHTML = `<div id="print-area">${html}</div>`;
+  openModal('modal-orden-detalle');
+}
+
+async function _reintentarFallidas() {
+  const items = window._failedImportItems || [];
+  if (!items.length) return;
+  toast(`⏳ Reintentando ${items.length} registros...`, 'info');
+  const BATCH = 400;
+  let ok = 0; const stillFailed = [];
+  for (let i = 0; i < items.length; i += BATCH) {
+    const chunk = items.slice(i, i + BATCH);
+    const { error } = await sb.from('refacciones').upsert(chunk);
+    if (error) stillFailed.push(...chunk);
+    else ok += chunk.length;
+  }
+  const { count } = await sb.from('refacciones').select('id', { count: 'exact', head: true });
+  window._failedImportItems = stillFailed;
+  _mostrarReporteImport({ total: items.length, successCount: ok, failedItems: stillFailed, supabaseCount: count });
+}
+
+async function verificarInventario() {
+  toast('🔍 Consultando Supabase...', 'info');
+  const { count, error } = await sb.from('refacciones').select('id', { count: 'exact', head: true });
+  if (error) { toast('Error al consultar Supabase: ' + error.message, 'danger'); return; }
+  const localCount = CACHE.refacciones.length;
+  const diff = localCount - count;
+  if (diff === 0) {
+    toast(`✅ Supabase y caché coinciden: ${count} refacciones.`);
+  } else {
+    const msg = diff > 0
+      ? `⚠️ ${diff} refacciones en caché NO están en Supabase. Vuelve a importar.`
+      : `ℹ️ Supabase tiene ${Math.abs(diff)} más que el caché local. Recarga la página.`;
+    toast(msg, 'danger');
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════ VEHICULOS */
