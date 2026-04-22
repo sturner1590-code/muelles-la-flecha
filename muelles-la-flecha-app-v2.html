@@ -240,6 +240,7 @@
       <button class="hamburger" onclick="toggleSidebar()">☰</button>
       <h2 id="page-title">Dashboard</h2>
     </div>
+    <button class="btn btn-outline btn-sm" onclick="diagnosticarConexion()" title="Verificar conexión con Supabase" style="font-size:12px">🩺 Diagnóstico</button>
   </header>
 
   <main class="content">
@@ -946,19 +947,45 @@ function seedDemo() {
 }
 
 /* ═══════════════════════════════════════════════════════════════ INIT */
+/* Carga una tabla completa con paginación para superar el límite de 1000 filas */
+async function _loadAll(table) {
+  const PAGE = 1000;
+  let all = [], page = 0;
+  while (true) {
+    const { data, error } = await sb.from(table).select('*').range(page * PAGE, (page + 1) * PAGE - 1);
+    if (error) {
+      console.error(`[Supabase SELECT ${table}]`, error.message);
+      return { data: all, error };
+    }
+    all = all.concat(data || []);
+    if (!data || data.length < PAGE) break;
+    page++;
+  }
+  return { data: all, error: null };
+}
+
 async function initApp() {
   try {
     const [c, v, o, r, cat] = await Promise.all([
-      sb.from('clientes').select('*'),
-      sb.from('vehiculos').select('*'),
-      sb.from('ordenes').select('*'),
-      sb.from('refacciones').select('*'),
+      _loadAll('clientes'),
+      _loadAll('vehiculos'),
+      _loadAll('ordenes'),
+      _loadAll('refacciones'),
       fetch('catalogo-vehiculos.json').then(res => res.ok ? res.json() : {}).catch(() => ({}))
     ]);
-    if (c.error) throw c.error;
-    if (v.error) throw v.error;
-    if (o.error) throw o.error;
-    if (r.error) throw r.error;
+
+    // Detectar errores por tabla y avisar con detalle
+    const tableErrors = [
+      c.error && `clientes: ${c.error.message}`,
+      v.error && `vehiculos: ${v.error.message}`,
+      o.error && `ordenes: ${o.error.message}`,
+      r.error && `refacciones: ${r.error.message}`,
+    ].filter(Boolean);
+
+    if (tableErrors.length) {
+      console.error('[Supabase init errors]', tableErrors);
+      toast(`⚠️ Error leyendo tablas: ${tableErrors.join(' | ')} — Revisa políticas RLS en Supabase.`, 'danger');
+    }
 
     CACHE.clientes    = c.data || [];
     CACHE.vehiculos   = v.data || [];
@@ -966,14 +993,64 @@ async function initApp() {
     CACHE.refacciones = r.data || [];
     VEHICULO_CATALOG  = cat || {};
 
+    // Avisar si tablas críticas cargaron vacías (posible RLS bloqueando SELECT)
+    if (!c.error && !CACHE.clientes.length && !CACHE.ordenes.length && !CACHE.refacciones.length) {
+      // Solo es problema si clientes también está vacío (primera vez es normal)
+    } else if (!o.error && !CACHE.ordenes.length && (CACHE.clientes.length > 0)) {
+      console.warn('[Supabase] ordenes vacío — verifica política SELECT en Supabase');
+    }
+
     populateMarcaDropdowns();
     if (!CACHE.clientes.length) seedDemo();
   } catch (err) {
     console.error('[Supabase init]', err);
-    toast('⚠️ Error de conexión. Revisa las credenciales de Supabase en el código.', 'danger');
+    toast('⚠️ Error de conexión. Revisa las credenciales de Supabase.', 'danger');
   }
   document.getElementById('loading-screen').style.display = 'none';
   renderDashboard();
+}
+
+/* Diagnóstico: compara conteos reales de Supabase vs caché local */
+async function diagnosticarConexion() {
+  toast('🔍 Diagnosticando conexión con Supabase...', 'info');
+  const tablas = ['clientes', 'vehiculos', 'ordenes', 'refacciones'];
+  const nombres = { clientes: 'Clientes', vehiculos: 'Vehículos', ordenes: 'Órdenes', refacciones: 'Refacciones' };
+  const cache   = { clientes: CACHE.clientes.length, vehiculos: CACHE.vehiculos.length, ordenes: CACHE.ordenes.length, refacciones: CACHE.refacciones.length };
+  const rows = [];
+
+  for (const t of tablas) {
+    const { count, error } = await sb.from(t).select('id', { count: 'exact', head: true });
+    const local = cache[t];
+    const remote = error ? '⛔ ERROR' : count;
+    const ok = !error && count === local;
+    rows.push(`<tr>
+      <td><strong>${nombres[t]}</strong></td>
+      <td style="text-align:center">${local}</td>
+      <td style="text-align:center;color:${error?'#dc2626':'inherit'}">${remote}</td>
+      <td style="text-align:center">${error ? '⛔ Error RLS/tabla' : ok ? '✅ OK' : count === 0 ? '🔴 Supabase vacío' : count < local ? '⚠️ Faltan registros' : 'ℹ️ Diferencia'}</td>
+    </tr>`);
+  }
+
+  document.getElementById('detalle-titulo').textContent = 'Diagnóstico Supabase';
+  document.getElementById('detalle-body').innerHTML = `<div id="print-area">
+    <p style="font-size:13px;color:#6b7280;margin-bottom:12px">Comparación entre lo que está en caché local (memoria) y lo que hay realmente en Supabase.</p>
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr style="background:#1e3a8a;color:#fff">
+        <th style="padding:9px 10px;text-align:left">Tabla</th>
+        <th style="padding:9px 10px;text-align:center">Local</th>
+        <th style="padding:9px 10px;text-align:center">Supabase</th>
+        <th style="padding:9px 10px;text-align:center">Estado</th>
+      </tr></thead>
+      <tbody>${rows.join('')}</tbody>
+    </table>
+    <div style="margin-top:14px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;font-size:12px">
+      <strong>🔴 Supabase vacío</strong> = la tabla existe pero RLS bloquea el SELECT o no hay datos.<br>
+      <strong>⛔ Error RLS/tabla</strong> = la tabla no existe o no tienes permiso de lectura.<br>
+      <strong>⚠️ Faltan registros</strong> = algunos datos no se guardaron en Supabase.<br>
+      Si ves 🔴 o ⛔ en Órdenes o Refacciones, ve a <strong>Supabase → Authentication → Policies</strong> y agrega una política <em>SELECT</em> para el rol <code>anon</code>.
+    </div>
+  </div>`;
+  openModal('modal-orden-detalle');
 }
 
 /* STATE */
