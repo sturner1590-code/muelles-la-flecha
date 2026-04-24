@@ -519,6 +519,7 @@
               <datalist id="orden-cliente-list"></datalist>
             </div>
             <button class="btn btn-primary btn-sm" onclick="openInlineClienteForm()">+ Nuevo</button>
+            <button class="btn btn-outline btn-sm" id="btn-na-cliente" onclick="toggleNACliente()" title="Marcar como Sin cliente">N/A</button>
           </div>
         </div>
         <div class="form-group">
@@ -529,6 +530,7 @@
               <datalist id="orden-vehiculo-list"></datalist>
             </div>
             <button class="btn btn-primary btn-sm" onclick="openInlineVehiculoForm()">+ Nuevo</button>
+            <button class="btn btn-outline btn-sm" id="btn-na-vehiculo" onclick="toggleNAVehiculo()" title="Marcar como Sin vehículo">N/A</button>
           </div>
         </div>
       </div>
@@ -1117,8 +1119,12 @@ function fmtDateTime(iso) {
   return new Date(iso).toLocaleString('es-MX', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
 }
 
-function getClienteName(id) { return DB.clientes().find(c=>c.id===id)?.nombre || '—'; }
+function getClienteName(id) {
+  if (!id || id === 'NA') return 'N/A';
+  return DB.clientes().find(c=>c.id===id)?.nombre || '—';
+}
 function getVehiculoLabel(id) {
+  if (!id || id === 'NA') return 'N/A';
   const v = DB.vehiculos().find(v=>v.id===id);
   if (!v) return '—';
   let label = [v.marca, v.modelo, v.anio].filter(Boolean).join(' ');
@@ -1877,12 +1883,57 @@ function openNewOrdenModal() {
   ['orden-descripcion','orden-notas','orden-mano-obra'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('orden-estado').value = 'recibido';
   document.getElementById('orden-prioridad').value = 'normal';
+  _resetNAOrden();
   populateClienteSelect('orden-cliente','');
   loadVehiculosCliente();
   currentOrdenLineas = [];
   renderRefaccionesTable();
   calculateOrderTotals();
   openModal('modal-orden');
+}
+
+function _resetNAOrden() {
+  const cInp = document.getElementById('orden-cliente');
+  const vInp = document.getElementById('orden-vehiculo');
+  const cBtn = document.getElementById('btn-na-cliente');
+  const vBtn = document.getElementById('btn-na-vehiculo');
+  cInp.disabled = false; cInp.dataset.clienteId = '';
+  vInp.disabled = false; vInp.dataset.vehiculoId = '';
+  if (cBtn) { cBtn.textContent = 'N/A'; cBtn.className = 'btn btn-outline btn-sm'; }
+  if (vBtn) { vBtn.textContent = 'N/A'; vBtn.className = 'btn btn-outline btn-sm'; }
+}
+
+function toggleNACliente() {
+  const inp = document.getElementById('orden-cliente');
+  const btn = document.getElementById('btn-na-cliente');
+  const isNA = inp.dataset.clienteId === 'NA';
+  if (isNA) {
+    inp.disabled = false; inp.value = ''; inp.dataset.clienteId = '';
+    btn.textContent = 'N/A'; btn.className = 'btn btn-outline btn-sm';
+    loadVehiculosCliente();
+  } else {
+    inp.disabled = true; inp.value = 'Sin cliente'; inp.dataset.clienteId = 'NA';
+    btn.textContent = '✕ Quitar'; btn.className = 'btn btn-secondary btn-sm';
+    _setNAVehiculo();
+  }
+}
+
+function toggleNAVehiculo() {
+  const inp = document.getElementById('orden-vehiculo');
+  const btn = document.getElementById('btn-na-vehiculo');
+  if (inp.dataset.vehiculoId === 'NA') {
+    inp.disabled = false; inp.value = ''; inp.dataset.vehiculoId = '';
+    btn.textContent = 'N/A'; btn.className = 'btn btn-outline btn-sm';
+  } else {
+    _setNAVehiculo();
+  }
+}
+
+function _setNAVehiculo() {
+  const inp = document.getElementById('orden-vehiculo');
+  const btn = document.getElementById('btn-na-vehiculo');
+  inp.disabled = true; inp.value = 'Sin vehículo'; inp.dataset.vehiculoId = 'NA';
+  if (btn) { btn.textContent = '✕ Quitar'; btn.className = 'btn btn-secondary btn-sm'; }
 }
 
 function selectClienteFromDatalist() {
@@ -1946,9 +1997,9 @@ function loadVehiculosCliente() {
   const datalist = document.getElementById('orden-vehiculo-list');
   const input = document.getElementById('orden-vehiculo');
 
-  if (!clienteId) {
+  if (!clienteId || clienteId === 'NA') {
     datalist.innerHTML = '';
-    input.value = '';
+    if (clienteId !== 'NA') { input.value = ''; input.dataset.vehiculoId = ''; }
     return;
   }
 
@@ -1964,27 +2015,37 @@ function loadVehiculosCliente() {
 function editOrden(id) {
   const o = DB.ordenes().find(o=>o.id===id);
   if (!o) return;
+  _resetNAOrden();
   document.getElementById('orden-id').value = o.id;
   document.getElementById('orden-descripcion').value = o.descripcion||'';
   document.getElementById('orden-notas').value = o.notas||'';
   document.getElementById('orden-mano-obra').value = o.manoObra||'';
   document.getElementById('orden-estado').value = o.estado;
   document.getElementById('orden-prioridad').value = o.prioridad;
-  populateClienteSelect('orden-cliente', o.clienteId);
-  setTimeout(()=>{
-    loadVehiculosCliente();
+
+  if (o.clienteId === 'NA') {
+    const cInp = document.getElementById('orden-cliente');
+    cInp.disabled = true; cInp.value = 'Sin cliente'; cInp.dataset.clienteId = 'NA';
+    const cBtn = document.getElementById('btn-na-cliente');
+    if (cBtn) { cBtn.textContent = '✕ Quitar'; cBtn.className = 'btn btn-secondary btn-sm'; }
+  } else {
+    populateClienteSelect('orden-cliente', o.clienteId);
+  }
+
+  if (o.vehiculoId === 'NA') {
+    _setNAVehiculo();
+  } else {
     setTimeout(()=>{
-      const v = DB.vehiculos().find(v => v.id === o.vehiculoId);
-      const inp = document.getElementById('orden-vehiculo');
-      if (v) {
-        inp.value = vehiculoDisplayText(v);
-        inp.dataset.vehiculoId = v.id;
-      } else {
-        inp.value = '';
-        inp.dataset.vehiculoId = '';
-      }
+      loadVehiculosCliente();
+      setTimeout(()=>{
+        const v = DB.vehiculos().find(v => v.id === o.vehiculoId);
+        const inp = document.getElementById('orden-vehiculo');
+        if (v) { inp.value = vehiculoDisplayText(v); inp.dataset.vehiculoId = v.id; }
+        else   { inp.value = ''; inp.dataset.vehiculoId = ''; }
+      }, 0);
     }, 0);
-  }, 0);
+  }
+
   currentOrdenLineas = JSON.parse(JSON.stringify(o.lineas || []));
   renderRefaccionesTable();
   calculateOrderTotals();
@@ -1992,11 +2053,13 @@ function editOrden(id) {
 }
 
 function saveOrden() {
-  const clienteId = resolveClienteId('orden-cliente');
-  const vehInput = document.getElementById('orden-vehiculo');
-  const vehiculoId = vehInput.dataset.vehiculoId || vehInput.value;
+  const clienteId  = resolveClienteId('orden-cliente');
+  const vehInput   = document.getElementById('orden-vehiculo');
+  const vehiculoId = vehInput.dataset.vehiculoId || (vehInput.value === 'Sin vehículo' ? 'NA' : vehInput.value);
   const descripcion = document.getElementById('orden-descripcion').value.trim();
-  if (!clienteId||!vehiculoId||!descripcion) { toast('Campos requeridos.','danger'); return; }
+  if ((!clienteId && clienteId !== 'NA') || (!vehiculoId && vehiculoId !== 'NA') || !descripcion) {
+    toast('Descripción requerida. Cliente y Vehículo pueden ser N/A.', 'danger'); return;
+  }
 
   const id = document.getElementById('orden-id').value;
   let rows = DB.ordenes();
