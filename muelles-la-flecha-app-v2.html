@@ -1528,6 +1528,27 @@ function setVehiculoCatalogValues(prefix, marca, modelo, anio) {
 }
 
 /* ═══════════════════════════════════════════════════════════════ DECODIFICADOR VIN (NHTSA) */
+
+// Decodifica el año directamente desde la posición 10 del VIN (estándar ISO 3779).
+// La letra/dígito es ambiguo entre dos ciclos de 30 años (ej. J = 1988 o 2018).
+// Para letras ambiguas, prefiere el ciclo más reciente si no excede el año actual +1.
+function decodeVinYear(vin) {
+  const c = vin[9]?.toUpperCase();
+  const map = {
+    A:[1980,2010],B:[1981,2011],C:[1982,2012],D:[1983,2013],E:[1984,2014],
+    F:[1985,2015],G:[1986,2016],H:[1987,2017],J:[1988,2018],K:[1989,2019],
+    L:[1990,2020],M:[1991,2021],N:[1992,2022],P:[1993,2023],R:[1994,2024],
+    S:[1995,2025],T:[1996,2026],V:[1997,2027],W:[1998,2028],X:[1999,2029],
+    Y:[2000,2030],1:[2001],2:[2002],3:[2003],4:[2004],5:[2005],
+    6:[2006],7:[2007],8:[2008],9:[2009],
+  };
+  const years = map[c];
+  if (!years) return null;
+  if (years.length === 1) return String(years[0]);
+  const now = new Date().getFullYear();
+  return String(years[1] <= now + 1 ? years[1] : years[0]);
+}
+
 function onVinInput(prefix) {
   const vin = document.getElementById(prefix + '-vin').value.trim();
   if (vin.length === 17) decodeVin(prefix);
@@ -1544,13 +1565,18 @@ async function decodeVin(prefix) {
     return;
   }
 
-  // Estado: cargando
+  // Decodificar año desde posición 10 del VIN antes de consultar NHTSA
+  const vinYear = decodeVinYear(vin);
+
   statusEl.innerHTML = '<span style="color:#6b7280">⏳ Consultando base de datos NHTSA...</span>';
   vinEl.style.borderColor = '#6b7280';
   if (btnEl) { btnEl.disabled = true; btnEl.textContent = '⏳'; }
 
   try {
-    const url = `https://vpic.nhtsa.dot.gov/api/vehicles/decodevin/${encodeURIComponent(vin)}?format=json`;
+    // Pasar modelyear al API mejora significativamente la precisión para VINs
+    // con años ambiguos (letras que mapean a dos ciclos, ej. J=1988 o 2018)
+    const yearParam = vinYear ? `&modelyear=${vinYear}` : '';
+    const url = `https://vpic.nhtsa.dot.gov/api/vehicles/decodevin/${encodeURIComponent(vin)}?format=json${yearParam}`;
     const res  = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
@@ -1560,27 +1586,35 @@ async function decodeVin(prefix) {
       return item?.Value && item.Value !== 'Not Applicable' && item.Value !== null ? item.Value : null;
     };
 
-    const rawMake  = get('Make');
-    const rawModel = get('Model');
-    const rawYear  = get('Model Year');
+    const rawMake   = get('Make');
+    const rawModel  = get('Model');
+    const rawSeries = get('Series');
 
-    if (!rawMake || !rawModel || !rawYear) {
+    // Algunos fabricantes (ej. Blue Diamond/International en México) usan
+    // códigos internos en el campo Model (MA025, XY003…). Cuando el campo
+    // Series tiene un nombre comercial más descriptivo, se prefiere.
+    const isInternalCode = rawModel && /^[A-Z]{1,3}\d{3,}$/.test(rawModel.trim());
+    const effectiveModel = (isInternalCode && rawSeries) ? rawSeries : (rawModel || rawSeries);
+
+    // El año se toma del VIN (posición 10) como fuente autoritativa;
+    // NHTSA puede errar en VINs ambiguos si no se le pasa modelyear.
+    const effectiveYear = vinYear || get('Model Year');
+
+    if (!rawMake || !effectiveModel || !effectiveYear) {
       statusEl.innerHTML = '<span style="color:#dc2626">❌ VIN no reconocido o datos incompletos en NHTSA</span>';
       vinEl.style.borderColor = '#dc2626';
       return;
     }
 
-    // Buscar coincidencia case-insensitive en el catálogo
+    // Buscar coincidencia case-insensitive en el catálogo local
     const catalogMarca = Object.keys(VEHICULO_CATALOG).find(k => k.toLowerCase() === rawMake.toLowerCase()) || rawMake;
-    // Normalizar modelo (NHTSA suele devolver nombre exacto o similar)
     const modelos = VEHICULO_CATALOG[catalogMarca] ? Object.keys(VEHICULO_CATALOG[catalogMarca]) : [];
-    const catalogModelo = modelos.find(m => m.toLowerCase() === rawModel.toLowerCase()) || rawModel;
+    const catalogModelo = modelos.find(m => m.toLowerCase() === effectiveModel.toLowerCase()) || effectiveModel;
 
-    // Llenar dropdowns
-    setVehiculoCatalogValues(prefix, catalogMarca, catalogModelo, rawYear);
+    setVehiculoCatalogValues(prefix, catalogMarca, catalogModelo, effectiveYear);
 
     const inCatalog = !!VEHICULO_CATALOG[catalogMarca];
-    statusEl.innerHTML = `<span style="color:#057a55">✅ Vehículo identificado: <strong>${catalogMarca} ${catalogModelo} ${rawYear}</strong>${inCatalog ? '' : ' <em style="color:#c27803">(no en catálogo local, datos cargados igualmente)</em>'}</span>`;
+    statusEl.innerHTML = `<span style="color:#057a55">✅ Vehículo identificado: <strong>${catalogMarca} ${catalogModelo} ${effectiveYear}</strong>${inCatalog ? '' : ' <em style="color:#c27803">(no en catálogo local, datos cargados igualmente)</em>'}</span>`;
     vinEl.style.borderColor = '#057a55';
   } catch (err) {
     statusEl.innerHTML = `<span style="color:#dc2626">❌ Error al consultar NHTSA: ${err.message}</span>`;
