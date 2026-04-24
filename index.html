@@ -2652,7 +2652,53 @@ function renderReportes() {
 const EXPORT_DEFS = {
   clientes: () => DB.clientes().map(c=>({ Nombre: c.nombre, Teléfono: c.telefono, Email: c.email||'', 'Razón Social': c.razonSocial||'', 'Tipo Cliente': c.tipoCliente })),
   vehiculos: () => DB.vehiculos().map(v=>({ Placa: v.placa||'', VIN: v.vin||'', Marca: v.marca, Modelo: v.modelo, Año: v.anio||'', Cliente: getClienteName(v.clienteId) })),
-  ordenes: () => DB.ordenes().map(o=>({ Cliente: getClienteName(o.clienteId), Vehiculo: getVehiculoLabel(o.vehiculoId), Descripcion: o.descripcion, Estado: o.estado, 'Material': fmt(o.totalMaterial||0), 'Mano Obra': fmt(o.manoObra||0), 'Total': fmt((+o.totalMaterial||0)+(+o.manoObra||0)), Fecha: fmtDate(o.creadoEn) }))
+  ordenes: () => {
+    const rows = [];
+    const sorted = [...DB.ordenes()].sort((a,b) => b.creadoEn?.localeCompare(a.creadoEn||''));
+    sorted.forEach(o => {
+      const cObj    = DB.clientes().find(c => c.id === o.clienteId);
+      const folio   = o.id.slice(-4).toUpperCase();
+      const cliente = getClienteName(o.clienteId);
+      const tel     = cObj?.telefono || '';
+      const razon   = cObj?.razonSocial || '';
+      const vehiculo = getVehiculoLabel(o.vehiculoId);
+      const vObj    = DB.vehiculos().find(v => v.id === o.vehiculoId);
+      const placa   = vObj?.placa || '';
+      const vin     = vObj?.vin   || '';
+      const totalMat  = +o.totalMaterial || 0;
+      const totalMano = +o.manoObra || 0;
+      const total     = totalMat + totalMano;
+      const lineas    = o.lineas && o.lineas.length ? o.lineas : [null];
+
+      lineas.forEach((l, idx) => {
+        rows.push({
+          'Folio':           `#${folio}`,
+          'Estado':          o.estado || '',
+          'Prioridad':       o.prioridad || 'normal',
+          'Cliente':         cliente,
+          'Teléfono':        tel,
+          'Razón Social':    razon,
+          'Vehículo':        vehiculo,
+          'Placa':           placa,
+          'VIN':             vin,
+          'Descripción':     o.descripcion || '',
+          'SKU':             l?.sku        || '',
+          'Refacción':       l?.nombre     || '',
+          'Cantidad':        l             ? +l.cantidad        : '',
+          'Precio Unitario': l             ? +l.precioUnitario  : '',
+          'Subtotal Línea':  l             ? +l.subtotal        : '',
+          'Total Material':  idx === 0 ? totalMat  : '',
+          'Mano de Obra':    idx === 0 ? totalMano : '',
+          'Total Orden':     idx === 0 ? total     : '',
+          'Fecha Creación':  idx === 0 ? fmtDate(o.creadoEn)     : '',
+          'Fecha Inicio':    idx === 0 ? fmtDate(o.iniciadoEn)   : '',
+          'Fecha Completado':idx === 0 ? fmtDate(o.completadoEn) : '',
+          'Notas':           idx === 0 ? (o.notas || '')          : '',
+        });
+      });
+    });
+    return rows;
+  },
 };
 
 function exportCSV(key) {
