@@ -1871,13 +1871,23 @@ function viewOrden(id) {
   if (!o) return;
   _printOrdenId = id;
 
-  const cliente  = getClienteName(o.clienteId);
-  const vObj     = DB.vehiculos().find(v => v.id === o.vehiculoId);
+  const cObj      = DB.clientes().find(c => c.id === o.clienteId);
+  const clienteNombre = getClienteName(o.clienteId);
+  const vObj      = DB.vehiculos().find(v => v.id === o.vehiculoId);
   const [badgeClass, badgeLabel] = STATUS_LABELS[o.estado] || ['badge-gray', o.estado];
   const totalMat  = +o.totalMaterial || 0;
   const totalMano = +o.manoObra || 0;
   const total     = totalMat + totalMano;
   const folioNum  = o.id.slice(-4).toUpperCase();
+
+  // Bloque cliente: nombre + teléfono + razón social
+  const clienteHtml = o.clienteId === 'NA'
+    ? '<span style="color:#9ca3af;font-size:13px">N/A</span>'
+    : cObj
+      ? `<div style="font-size:15px;font-weight:700;color:#111827;margin-bottom:5px">${cObj.nombre}</div>
+         ${cObj.telefono ? `<div style="font-size:12px;color:#6b7280;margin-bottom:3px">📞 ${cObj.telefono}</div>` : ''}
+         ${cObj.razonSocial ? `<div style="font-size:12px;color:#6b7280">🏢 ${cObj.razonSocial}</div>` : ''}`
+      : `<div style="font-size:14px;font-weight:700">${clienteNombre}</div>`;
 
   // Bloque de vehículo: Marca/Modelo/Año → Núm. Unidad → Placa → VIN
   const vehHtml = vObj ? (() => {
@@ -1897,7 +1907,7 @@ function viewOrden(id) {
           <th style="padding:9px 10px;text-align:right;color:#fff;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">P. Unit.</th>
           <th style="padding:9px 10px;text-align:right;color:#fff;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Subtotal</th>
         </tr></thead>
-        <tbody>${o.lineas.map((l,li) => `<tr style="background:${li%2===0?'#fff':'#f8fafc'}">
+        <tbody>${o.lineas.map((l,li) => `<tr style="background:${li%2===0?'#fff':'#f0f7ff'}">
           <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;color:#6b7280;font-family:monospace;font-size:12px">${l.sku||'—'}</td>
           <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">${l.nombre||'—'}</td>
           <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:center">${l.cantidad}</td>
@@ -1906,6 +1916,16 @@ function viewOrden(id) {
         </tr>`).join('')}</tbody>
       </table>`
     : `<p style="color:#9ca3af;text-align:center;padding:16px;font-size:13px">Sin refacciones agregadas</p>`;
+
+  // Encabezado de sección con color de fondo
+  const secBox = (color, icon, title, content) =>
+    `<div style="border-radius:10px;overflow:hidden;border:1.5px solid ${color}20;box-shadow:0 1px 4px ${color}18">
+       <div style="background:${color};padding:8px 14px;display:flex;align-items:center;gap:7px">
+         <span style="font-size:14px">${icon}</span>
+         <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#fff">${title}</span>
+       </div>
+       <div style="padding:14px;background:#fff">${content}</div>
+     </div>`;
 
   const secLabel = (txt) =>
     `<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#1e3a8a;border-left:3px solid #dc2626;padding-left:8px;margin-bottom:10px">${txt}</div>`;
@@ -1917,7 +1937,6 @@ function viewOrden(id) {
       <!-- ══ ENCABEZADO IMPRESIÓN ══ -->
       <div class="print-header" style="display:none;margin-bottom:20px">
         <div style="background:linear-gradient(135deg,#7f1d1d 0%,#1e3a8a 100%);border-radius:10px;padding:18px 22px;display:flex;align-items:center;gap:16px;color:#fff">
-          <!-- Logo -->
           <div style="flex-shrink:0;background:#fff;border-radius:8px;padding:4px;display:flex;align-items:center;justify-content:center">
             <img src="Logo Muelles y Mofles.png" alt="Muelles y Mofles La Flecha" style="height:56px;width:auto;display:block">
           </div>
@@ -1933,68 +1952,72 @@ function viewOrden(id) {
         </div>
       </div>
 
-      <!-- ══ FOLIO visible en pantalla (sin encabezado impresión) ══ -->
-      <div class="no-print" style="display:flex;gap:10px;align-items:center;margin-bottom:16px">
-        <span style="background:#1e3a8a;color:#fff;font-weight:700;font-size:13px;padding:5px 14px;border-radius:20px">#${folioNum}</span>
+      <!-- ══ FOLIO + BADGES en pantalla ══ -->
+      <div class="no-print" style="display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+        <span style="background:linear-gradient(90deg,#1e3a8a,#2563eb);color:#fff;font-weight:700;font-size:13px;padding:5px 16px;border-radius:20px;letter-spacing:.04em">#${folioNum}</span>
         <span class="badge ${badgeClass}">${badgeLabel}</span>
         ${badge(PRIORITY_LABELS, o.prioridad||'normal')}
       </div>
 
-      <!-- ══ INFO PRINCIPAL ══ -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+      <!-- ══ INFO PRINCIPAL (3 tarjetas coloreadas) ══ -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px">
 
-        <!-- Datos del servicio -->
-        <div style="border:1px solid #e5e7eb;border-radius:8px;padding:14px">
-          ${secLabel('Datos del Servicio')}
-          <div style="margin-bottom:6px"><span style="color:#6b7280;font-size:12px">Folio:</span> <strong style="color:#1e3a8a">#${folioNum}</strong></div>
-          <div style="margin-bottom:6px"><span style="color:#6b7280;font-size:12px">Estado:</span> <span class="badge ${badgeClass}">${badgeLabel}</span></div>
-          <div style="margin-bottom:6px"><span style="color:#6b7280;font-size:12px">Prioridad:</span> ${badge(PRIORITY_LABELS, o.prioridad||'normal')}</div>
-          <hr style="border:none;border-top:1px solid #e5e7eb;margin:10px 0">
-          <div style="margin-bottom:5px"><span style="color:#6b7280;font-size:12px">📅 Creada:</span> <strong style="font-size:12px">${fmtDateTime(o.creadoEn)}</strong></div>
-          <div style="margin-bottom:5px"><span style="color:#6b7280;font-size:12px">⚙️ Iniciada:</span> <strong style="font-size:12px">${fmtDateTime(o.iniciadoEn)}</strong></div>
-          <div><span style="color:#6b7280;font-size:12px">✅ Completada:</span> <strong style="font-size:12px">${fmtDateTime(o.completadoEn)}</strong></div>
-        </div>
+        ${secBox('#dc2626','👤','Cliente', clienteHtml)}
 
-        <!-- Cliente y Vehículo -->
-        <div style="border:1px solid #e5e7eb;border-radius:8px;padding:14px">
-          ${secLabel('Cliente')}
-          <div style="margin-bottom:12px;font-size:14px;font-weight:700;color:#111827">${cliente}</div>
-          ${secLabel('Vehículo')}
-          ${vehHtml}
-        </div>
+        ${secBox('#1e3a8a','🚗','Vehículo', vehHtml)}
+
+        ${secBox('#047857','📋','Datos del Servicio',
+          `<div style="margin-bottom:6px;font-size:12px"><span style="color:#6b7280">Estado:</span> <span class="badge ${badgeClass}" style="margin-left:4px">${badgeLabel}</span></div>
+           <div style="margin-bottom:6px;font-size:12px"><span style="color:#6b7280">Prioridad:</span> ${badge(PRIORITY_LABELS, o.prioridad||'normal')}</div>
+           <hr style="border:none;border-top:1px solid #e5e7eb;margin:8px 0">
+           <div style="margin-bottom:4px;font-size:12px"><span style="color:#6b7280">📅 Creada:</span> <strong>${fmtDateTime(o.creadoEn)}</strong></div>
+           <div style="margin-bottom:4px;font-size:12px"><span style="color:#6b7280">⚙️ Iniciada:</span> <strong>${fmtDateTime(o.iniciadoEn)}</strong></div>
+           <div style="font-size:12px"><span style="color:#6b7280">✅ Completada:</span> <strong>${fmtDateTime(o.completadoEn)}</strong></div>`
+        )}
       </div>
 
       <!-- ══ DESCRIPCIÓN ══ -->
       <div style="margin-bottom:16px">
-        ${secLabel('Descripción del Trabajo')}
-        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px;font-size:13px">${o.descripcion||'—'}</div>
+        <div style="background:#f59e0b;padding:7px 14px;border-radius:8px 8px 0 0;display:flex;align-items:center;gap:7px">
+          <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#fff">🔧 Descripción del Trabajo</span>
+        </div>
+        <div style="background:#fffbeb;border:1.5px solid #fde68a;border-top:none;border-radius:0 0 8px 8px;padding:12px;font-size:13px">${o.descripcion||'—'}</div>
       </div>
 
       <!-- ══ REFACCIONES ══ -->
       <div style="margin-bottom:16px">
-        ${secLabel('Refacciones y Piezas')}
-        <div style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">${lineasHtml}</div>
+        <div style="background:#1e3a8a;padding:7px 14px;border-radius:8px 8px 0 0">
+          <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#fff">📦 Refacciones y Piezas</span>
+        </div>
+        <div style="border:1.5px solid #bfdbfe;border-top:none;border-radius:0 0 8px 8px;overflow:hidden">${lineasHtml}</div>
       </div>
 
       <!-- ══ TOTALES ══ -->
       <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
-        <div style="border:1px solid #e5e7eb;border-radius:8px;padding:14px;min-width:250px">
-          <div style="display:flex;justify-content:space-between;margin-bottom:7px;font-size:13px">
-            <span style="color:#6b7280">Material:</span><span>${fmt(totalMat)}</span>
+        <div style="border-radius:10px;overflow:hidden;min-width:260px;box-shadow:0 2px 8px rgba(30,58,138,.12)">
+          <div style="background:linear-gradient(90deg,#1e3a8a,#2563eb);padding:8px 16px">
+            <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#fff">Resumen de Costos</span>
           </div>
-          <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:13px">
-            <span style="color:#6b7280">Mano de Obra:</span><span>${fmt(totalMano)}</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;font-size:17px;font-weight:800;border-top:2px solid #1e3a8a;padding-top:10px">
-            <span style="color:#1e3a8a">TOTAL:</span><span style="color:#dc2626">${fmt(total)}</span>
+          <div style="background:#fff;border:1.5px solid #bfdbfe;border-top:none;border-radius:0 0 10px 10px;padding:14px">
+            <div style="display:flex;justify-content:space-between;margin-bottom:7px;font-size:13px">
+              <span style="color:#6b7280">Material:</span><span style="font-weight:600">${fmt(totalMat)}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:13px">
+              <span style="color:#6b7280">Mano de Obra:</span><span style="font-weight:600">${fmt(totalMano)}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:18px;font-weight:800;background:#fff5f5;border-radius:6px;padding:8px 10px;margin-top:4px">
+              <span style="color:#1e3a8a">TOTAL:</span><span style="color:#dc2626">${fmt(total)}</span>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- ══ NOTAS ══ -->
       ${o.notas ? `<div style="margin-bottom:8px">
-        ${secLabel('Notas')}
-        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;font-size:13px">${o.notas}</div>
+        <div style="background:#92400e;padding:7px 14px;border-radius:8px 8px 0 0">
+          <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#fff">📝 Notas</span>
+        </div>
+        <div style="background:#fffbeb;border:1.5px solid #fde68a;border-top:none;border-radius:0 0 8px 8px;padding:12px;font-size:13px">${o.notas}</div>
       </div>` : ''}
 
       <!-- Pie de página impresión -->
@@ -2003,7 +2026,6 @@ function viewOrden(id) {
       </div>
     </div>`;
 
-  // Mostrar encabezados solo al imprimir
   document.querySelectorAll('#print-area .print-header').forEach(el => el.style.display = 'none');
   openModal('modal-orden-detalle');
 }
