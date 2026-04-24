@@ -2304,7 +2304,10 @@ function triggerImportRefacciones() {
 function renderInventario() {
   const q = (document.getElementById('search-inventario')?.value||'').toLowerCase();
   let rows = DB.refacciones();
-  if (q) rows = rows.filter(r=>r.nombre.toLowerCase().includes(q)||r.sku.toLowerCase().includes(q));
+  if (q) rows = rows.filter(r=>
+    (r.nombre && r.nombre.toLowerCase().includes(q)) ||
+    (r.sku    && String(r.sku).toLowerCase().includes(q))
+  );
   document.getElementById('tbody-inventario').innerHTML = rows.length
     ? rows.map(r=>`<tr><td><code>${r.sku}</code></td><td>${r.nombre}</td><td>${r.stock||'—'}</td><td>${r.minimo||'—'}</td><td>${fmt(r.precio)}</td><td><button class="btn btn-primary btn-sm btn-icon" onclick="editRefaccion('${r.id}')">✎</button> <button class="btn btn-danger btn-sm btn-icon" onclick="deleteRefaccion('${r.id}')">🗑</button></td></tr>`).join('')
     : `<tr><td colspan="7" class="empty-state">Sin refacciones. Importa un archivo Excel.</td></tr>`;
