@@ -222,6 +222,9 @@
     <div class="nav-item" data-page="ordenes" onclick="navigate('ordenes')">
       <span class="nav-icon">📋</span> Ordenes
     </div>
+    <div class="nav-item" data-page="cotizaciones" onclick="navigate('cotizaciones')">
+      <span class="nav-icon">💰</span> Cotizaciones
+    </div>
     <div class="nav-item" data-page="inventario" onclick="navigate('inventario')">
       <span class="nav-icon">📦</span> Inventario
     </div>
@@ -305,6 +308,21 @@
       <div class="table-wrap">
         <table><thead><tr><th>#</th><th>Vehiculo</th><th class="hide-mobile">Cliente</th><th>Estado</th><th class="hide-mobile">Prioridad</th><th class="hide-mobile">Material</th><th class="hide-mobile">M.O.</th><th>Total</th><th class="hide-mobile">Fecha Creación</th><th>Acciones</th></tr></thead>
           <tbody id="tbody-ordenes"></tbody></table>
+      </div>
+    </section>
+
+    <!-- COTIZACIONES -->
+    <section class="page" id="page-cotizaciones">
+      <div class="section-header">
+        <h3>💰 Cotizaciones</h3>
+        <div class="btn-group">
+          <input type="text" class="search-bar" placeholder="Buscar cotización..." id="search-cotizaciones" oninput="renderCotizaciones()">
+          <button class="btn btn-primary" onclick="openNewCotizacionModal()">+ Nueva</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table><thead><tr><th>#</th><th>Vehículo</th><th class="hide-mobile">Cliente</th><th class="hide-mobile">Material</th><th class="hide-mobile">M.O.</th><th>Total</th><th>Fecha</th><th>Acciones</th></tr></thead>
+          <tbody id="tbody-cotizaciones"></tbody></table>
       </div>
     </section>
 
@@ -723,6 +741,87 @@
   </div>
 </div>
 
+<!-- MODAL COTIZACION -->
+<div class="modal-backdrop" id="modal-cotizacion">
+  <div class="modal large">
+    <div class="modal-header">
+      <h3>Nueva Cotización</h3>
+      <button class="modal-close" onclick="closeModal('modal-cotizacion')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="cotizacion-id">
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Cliente</label>
+          <div style="display:flex;gap:6px">
+            <div style="flex:1">
+              <input type="text" class="form-control" id="cotizacion-cliente" list="cotizacion-cliente-list" onchange="selectCotizacionClienteFromDatalist()" placeholder="Buscar cliente...">
+              <datalist id="cotizacion-cliente-list"></datalist>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="openInlineClienteForm('cotizacion')">+ Nuevo</button>
+            <button class="btn btn-outline btn-sm" id="btn-na-cotizacion-cliente" onclick="toggleNACotizacionCliente()" title="Marcar como Sin cliente">N/A</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Vehiculo</label>
+          <div style="display:flex;gap:6px">
+            <div style="flex:1">
+              <input type="text" class="form-control" id="cotizacion-vehiculo" list="cotizacion-vehiculo-list" onchange="selectCotizacionVehiculoFromDatalist()" placeholder="Buscar vehículo...">
+              <datalist id="cotizacion-vehiculo-list"></datalist>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="openInlineVehiculoForm('cotizacion')">+ Nuevo</button>
+            <button class="btn btn-outline btn-sm" id="btn-na-cotizacion-vehiculo" onclick="toggleNACotizacionVehiculo()" title="Marcar como Sin vehículo">N/A</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin:16px 0;padding:12px;background:#f9fafb;border-radius:8px;border:1px solid var(--border)">
+        <div style="font-weight:600;margin-bottom:12px;color:var(--secondary)">Refacciones y Piezas</div>
+        <div style="margin-bottom:12px">
+          <button class="btn btn-primary btn-sm" onclick="addCotizacionRefaccionLine()">+ Agregar Refaccion</button>
+        </div>
+        <table class="refacciones-table">
+          <thead><tr>
+            <th style="width:105px">SKU</th>
+            <th>Refaccion / Categoría</th>
+            <th style="width:68px">Cant.</th>
+            <th style="width:100px">Precio Unit.</th>
+            <th style="width:88px">Subtotal</th>
+            <th style="width:38px">Accion</th>
+          </tr></thead>
+          <tbody id="cotizacion-refacciones-tbody"></tbody>
+        </table>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Mano de Obra ($)</label>
+          <input class="form-control" id="cotizacion-mano-obra" type="number" placeholder="500" min="0" oninput="calculateCotizacionTotals()">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Notas</label>
+        <textarea class="form-control" id="cotizacion-notas" rows="2"></textarea>
+      </div>
+
+      <div class="summary-box">
+        <div class="summary-row"><span>Total Material:</span><strong id="cot-total-material">$0.00</strong></div>
+        <div class="summary-row"><span>Mano de Obra:</span><strong id="cot-total-mano">$0.00</strong></div>
+        <div class="summary-row" style="border-top:2px solid var(--border);padding-top:8px;margin-top:8px">
+          <span style="font-weight:700">TOTAL COTIZACIÓN:</span>
+          <strong id="cot-total-final" style="font-size:16px">$0.00</strong>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-cotizacion')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCotizacion()">Guardar Cotización</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL DETALLE ORDEN -->
 <div class="modal-backdrop" id="modal-orden-detalle">
   <div class="modal large">
@@ -889,7 +988,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /* ─── CACHÉ LOCAL (espejo de Supabase) ────────────────────────── */
-const CACHE = { clientes: [], vehiculos: [], ordenes: [], refacciones: [] };
+const CACHE = { clientes: [], vehiculos: [], ordenes: [], refacciones: [], cotizaciones: [] };
 
 /* ─── CATÁLOGO DE VEHÍCULOS ───────────────────────────────────── */
 let VEHICULO_CATALOG = {};
@@ -898,11 +997,12 @@ let VEHICULO_CATALOG = {};
 const DB = {
   uid: () => Date.now().toString(36) + Math.random().toString(36).slice(2),
 
-  clientes:    () => CACHE.clientes,
-  vehiculos:   () => CACHE.vehiculos,
-  ordenes:     () => CACHE.ordenes,
-  parts:       () => CACHE.refacciones,
-  refacciones: () => CACHE.refacciones,
+  clientes:     () => CACHE.clientes,
+  vehiculos:    () => CACHE.vehiculos,
+  ordenes:      () => CACHE.ordenes,
+  parts:        () => CACHE.refacciones,
+  refacciones:  () => CACHE.refacciones,
+  cotizaciones: () => CACHE.cotizaciones,
 
   /* Sincroniza cambios con Supabase en segundo plano (fire-and-forget) */
   _push(table, newData, oldData) {
@@ -922,11 +1022,12 @@ const DB = {
     });
   },
 
-  saveClientes(v)    { const o = CACHE.clientes;    CACHE.clientes = v;    DB._push('clientes', v, o); },
-  saveVehiculos(v)   { const o = CACHE.vehiculos;   CACHE.vehiculos = v;   DB._push('vehiculos', v, o); },
-  saveOrdenes(v)     { const o = CACHE.ordenes;     CACHE.ordenes = v;     DB._push('ordenes', v, o); },
-  saveParts(v)       { DB.saveRefacciones(v); },
-  saveRefacciones(v) { const o = CACHE.refacciones; CACHE.refacciones = v; DB._push('refacciones', v, o); },
+  saveClientes(v)      { const o = CACHE.clientes;      CACHE.clientes = v;      DB._push('clientes', v, o); },
+  saveVehiculos(v)     { const o = CACHE.vehiculos;     CACHE.vehiculos = v;     DB._push('vehiculos', v, o); },
+  saveOrdenes(v)       { const o = CACHE.ordenes;       CACHE.ordenes = v;       DB._push('ordenes', v, o); },
+  saveParts(v)         { DB.saveRefacciones(v); },
+  saveRefacciones(v)   { const o = CACHE.refacciones;   CACHE.refacciones = v;   DB._push('refacciones', v, o); },
+  saveCotizaciones(v)  { const o = CACHE.cotizaciones;  CACHE.cotizaciones = v;  DB._push('cotizaciones', v, o); },
 };
 
 /* SEED — solo si las tablas están vacías en Supabase */
@@ -968,20 +1069,22 @@ async function _loadAll(table) {
 
 async function initApp() {
   try {
-    const [c, v, o, r, cat] = await Promise.all([
+    const [c, v, o, r, cot, cat] = await Promise.all([
       _loadAll('clientes'),
       _loadAll('vehiculos'),
       _loadAll('ordenes'),
       _loadAll('refacciones'),
+      _loadAll('cotizaciones'),
       fetch('catalogo-vehiculos.json').then(res => res.ok ? res.json() : {}).catch(() => ({}))
     ]);
 
     // Detectar errores por tabla y avisar con detalle
     const tableErrors = [
-      c.error && `clientes: ${c.error.message}`,
-      v.error && `vehiculos: ${v.error.message}`,
-      o.error && `ordenes: ${o.error.message}`,
-      r.error && `refacciones: ${r.error.message}`,
+      c.error   && `clientes: ${c.error.message}`,
+      v.error   && `vehiculos: ${v.error.message}`,
+      o.error   && `ordenes: ${o.error.message}`,
+      r.error   && `refacciones: ${r.error.message}`,
+      cot.error && `cotizaciones: ${cot.error.message}`,
     ].filter(Boolean);
 
     if (tableErrors.length) {
@@ -989,11 +1092,12 @@ async function initApp() {
       toast(`⚠️ Error leyendo tablas: ${tableErrors.join(' | ')} — Revisa políticas RLS en Supabase.`, 'danger');
     }
 
-    CACHE.clientes    = c.data || [];
-    CACHE.vehiculos   = v.data || [];
-    CACHE.ordenes     = o.data || [];
-    CACHE.refacciones = r.data || [];
-    VEHICULO_CATALOG  = cat || {};
+    CACHE.clientes      = c.data   || [];
+    CACHE.vehiculos     = v.data   || [];
+    CACHE.ordenes       = o.data   || [];
+    CACHE.refacciones   = r.data   || [];
+    CACHE.cotizaciones  = cot.data || [];
+    VEHICULO_CATALOG    = cat      || {};
 
     // Avisar si tablas críticas cargaron vacías (posible RLS bloqueando SELECT)
     if (!c.error && !CACHE.clientes.length && !CACHE.ordenes.length && !CACHE.refacciones.length) {
@@ -1015,9 +1119,9 @@ async function initApp() {
 /* Diagnóstico: compara conteos reales de Supabase vs caché local */
 async function diagnosticarConexion() {
   toast('🔍 Diagnosticando conexión con Supabase...', 'info');
-  const tablas = ['clientes', 'vehiculos', 'ordenes', 'refacciones'];
-  const nombres = { clientes: 'Clientes', vehiculos: 'Vehículos', ordenes: 'Órdenes', refacciones: 'Refacciones' };
-  const cache   = { clientes: CACHE.clientes.length, vehiculos: CACHE.vehiculos.length, ordenes: CACHE.ordenes.length, refacciones: CACHE.refacciones.length };
+  const tablas = ['clientes', 'vehiculos', 'ordenes', 'refacciones', 'cotizaciones'];
+  const nombres = { clientes: 'Clientes', vehiculos: 'Vehículos', ordenes: 'Órdenes', refacciones: 'Refacciones', cotizaciones: 'Cotizaciones' };
+  const cache   = { clientes: CACHE.clientes.length, vehiculos: CACHE.vehiculos.length, ordenes: CACHE.ordenes.length, refacciones: CACHE.refacciones.length, cotizaciones: CACHE.cotizaciones.length };
   const rows = [];
 
   for (const t of tablas) {
@@ -1061,7 +1165,7 @@ let currentOrdenLineas = [];
 let ordenRefaccionesMap = {};
 
 /* ═══════════════════════════════════════════════════════════════ UI HELPERS */
-const PAGE_TITLES = { dashboard: '📊 Dashboard', clientes: '👥 Clientes', vehiculos: '🚗 Vehiculos', ordenes: '📋 Ordenes', inventario: '📦 Inventario', reportes: '📈 Reportes', exportar: '📄 Exportar' };
+const PAGE_TITLES = { dashboard: '📊 Dashboard', clientes: '👥 Clientes', vehiculos: '🚗 Vehiculos', ordenes: '📋 Ordenes', cotizaciones: '💰 Cotizaciones', inventario: '📦 Inventario', reportes: '📈 Reportes', exportar: '📄 Exportar' };
 const STATUS_LABELS   = { recibido: ['badge-gray', 'Recibido'], en_proceso: ['badge-red', 'En Proceso'], completado: ['badge-green', 'Completado'] };
 const PRIORITY_LABELS = { normal: ['badge-gray', 'Normal'], alta: ['badge-yellow', '⚡ Alta'], urgente: ['badge-red', '🔴 Urgente'] };
 
@@ -1074,7 +1178,7 @@ function navigate(page) {
   closeSidebar();
   const renderers = {
     dashboard: renderDashboard, clientes: renderClientes, vehiculos: renderVehiculos,
-    ordenes: renderOrdenes, inventario: renderInventario, reportes: renderReportes
+    ordenes: renderOrdenes, cotizaciones: renderCotizaciones, inventario: renderInventario, reportes: renderReportes
   };
   if (renderers[page]) renderers[page]();
 }
@@ -2325,7 +2429,10 @@ function selectRefaccionFromDatalist(idx) {
 }
 
 /* ═══════════════════════════════════════════════════════════════ INLINE CLIENTE/VEHICULO */
-function openInlineClienteForm() {
+let _inlineContext = 'orden'; // 'orden' | 'cotizacion'
+
+function openInlineClienteForm(context = 'orden') {
+  _inlineContext = context;
   ['inline-cliente-nombre','inline-cliente-tel','inline-cliente-razon'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('inline-cliente-tipo').value = 'contado';
   openModal('modal-cliente-inline');
@@ -2345,17 +2452,21 @@ function saveInlineCliente() {
   clientes.push(newCliente);
   DB.saveClientes(clientes);
 
-  document.getElementById('orden-cliente').innerHTML = '<option value="NA">N/A</option>' +
-    clientes.map(c=>`<option value="${c.id}"${c.id===newCliente.id?' selected':''}>${c.nombre}</option>`).join('');
-  document.getElementById('orden-cliente').value = newCliente.id;
-  loadVehiculosCliente();
+  if (_inlineContext === 'cotizacion') {
+    populateClienteSelect('cotizacion-cliente', newCliente.id);
+    loadVehiculosCotizacionCliente();
+  } else {
+    populateClienteSelect('orden-cliente', newCliente.id);
+    loadVehiculosCliente();
+  }
 
   closeModal('modal-cliente-inline');
   toast('Cliente creado y seleccionado.');
 }
 
-function openInlineVehiculoForm() {
-  const clienteId = resolveClienteId('orden-cliente') || 'NA';
+function openInlineVehiculoForm(context = 'orden') {
+  _inlineContext = context;
+  const clienteId = resolveClienteId(_inlineContext === 'cotizacion' ? 'cotizacion-cliente' : 'orden-cliente') || 'NA';
   populateClienteSelect('inline-vehiculo-cliente', clienteId);
   ['inline-vehiculo-placa','inline-vehiculo-vin','inline-vehiculo-color','inline-vehiculo-num'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('inline-vehiculo-marca').value  = '';
@@ -2388,10 +2499,17 @@ function saveInlineVehiculo() {
   vehiculos.push(newVehiculo);
   DB.saveVehiculos(vehiculos);
 
-  loadVehiculosCliente();
-  const inp = document.getElementById('orden-vehiculo');
-  inp.value = vehiculoDisplayText(newVehiculo);
-  inp.dataset.vehiculoId = newVehiculo.id;
+  if (_inlineContext === 'cotizacion') {
+    loadVehiculosCotizacionCliente();
+    const inp = document.getElementById('cotizacion-vehiculo');
+    inp.value = vehiculoDisplayText(newVehiculo);
+    inp.dataset.vehiculoId = newVehiculo.id;
+  } else {
+    loadVehiculosCliente();
+    const inp = document.getElementById('orden-vehiculo');
+    inp.value = vehiculoDisplayText(newVehiculo);
+    inp.dataset.vehiculoId = newVehiculo.id;
+  }
 
   closeModal('modal-vehiculo-inline');
   toast('Vehiculo creado y seleccionado.');
@@ -2537,6 +2655,420 @@ function exportXLSX(key) {
   XLSX.utils.book_append_sheet(wb, ws, key);
   XLSX.writeFile(wb, `${key}_${new Date().toISOString().slice(0,10)}.xlsx`);
   toast('Exportado.');
+}
+
+/* ═══════════════════════════════════════════════════════════════ COTIZACIONES */
+let currentCotizacionLineas = [];
+
+function renderCotizaciones() {
+  const q = (document.getElementById('search-cotizaciones')?.value||'').toLowerCase();
+  let rows = DB.cotizaciones();
+  if (q) rows = rows.filter(c =>
+    getClienteName(c.clienteId).toLowerCase().includes(q) ||
+    getVehiculoLabel(c.vehiculoId).toLowerCase().includes(q)
+  );
+  rows = [...rows].sort((a,b) => b.creadoEn?.localeCompare(a.creadoEn||''));
+  document.getElementById('tbody-cotizaciones').innerHTML = rows.length
+    ? rows.map((c, i) => {
+        const totalMat  = +c.totalMaterial || 0;
+        const totalMano = +c.manoObra || 0;
+        const total = totalMat + totalMano;
+        const num = String(rows.length - i).padStart(4, '0');
+        return `<tr style="cursor:pointer" onclick="viewCotizacion('${c.id}')">
+          <td><strong>#${num}</strong></td>
+          <td>${getVehiculoLabel(c.vehiculoId)}</td>
+          <td class="hide-mobile">${getClienteName(c.clienteId)}</td>
+          <td class="hide-mobile">${fmt(totalMat)}</td>
+          <td class="hide-mobile">${fmt(totalMano)}</td>
+          <td><strong>${fmt(total)}</strong></td>
+          <td style="font-size:12px;white-space:nowrap">${fmtDateTime(c.creadoEn)}</td>
+          <td onclick="event.stopPropagation()">
+            <button class="btn btn-outline btn-sm btn-icon" onclick="editCotizacion('${c.id}')">✎</button>
+            <button class="btn btn-danger btn-sm btn-icon" onclick="deleteCotizacion('${c.id}')">🗑</button>
+          </td>
+        </tr>`;
+      }).join('')
+    : `<tr><td colspan="8" class="empty-state">Sin cotizaciones</td></tr>`;
+}
+
+function openNewCotizacionModal() {
+  document.getElementById('cotizacion-id').value = '';
+  ['cotizacion-notas','cotizacion-mano-obra'].forEach(id => document.getElementById(id).value = '');
+  _resetNACotizacion();
+  populateClienteSelect('cotizacion-cliente', '');
+  loadVehiculosCotizacionCliente();
+  currentCotizacionLineas = [];
+  renderCotizacionRefaccionesTable();
+  calculateCotizacionTotals();
+  openModal('modal-cotizacion');
+}
+
+function _resetNACotizacion() {
+  const cInp = document.getElementById('cotizacion-cliente');
+  const vInp = document.getElementById('cotizacion-vehiculo');
+  const cBtn = document.getElementById('btn-na-cotizacion-cliente');
+  const vBtn = document.getElementById('btn-na-cotizacion-vehiculo');
+  cInp.disabled = false; cInp.dataset.clienteId = '';
+  vInp.disabled = false; vInp.dataset.vehiculoId = '';
+  if (cBtn) { cBtn.textContent = 'N/A'; cBtn.className = 'btn btn-outline btn-sm'; }
+  if (vBtn) { vBtn.textContent = 'N/A'; vBtn.className = 'btn btn-outline btn-sm'; }
+}
+
+function toggleNACotizacionCliente() {
+  const inp = document.getElementById('cotizacion-cliente');
+  const btn = document.getElementById('btn-na-cotizacion-cliente');
+  if (inp.dataset.clienteId === 'NA') {
+    inp.disabled = false; inp.value = ''; inp.dataset.clienteId = '';
+    btn.textContent = 'N/A'; btn.className = 'btn btn-outline btn-sm';
+    loadVehiculosCotizacionCliente();
+  } else {
+    inp.disabled = true; inp.value = 'Sin cliente'; inp.dataset.clienteId = 'NA';
+    btn.textContent = '✕ Quitar'; btn.className = 'btn btn-secondary btn-sm';
+    const datalist = document.getElementById('cotizacion-vehiculo-list');
+    const vehInp  = document.getElementById('cotizacion-vehiculo');
+    datalist.innerHTML = DB.vehiculos().map(v => `<option value="${vehiculoDisplayText(v)}"></option>`).join('');
+    vehInp.disabled = false; vehInp.value = ''; vehInp.dataset.vehiculoId = '';
+  }
+}
+
+function toggleNACotizacionVehiculo() {
+  const inp = document.getElementById('cotizacion-vehiculo');
+  const btn = document.getElementById('btn-na-cotizacion-vehiculo');
+  if (inp.dataset.vehiculoId === 'NA') {
+    inp.disabled = false; inp.value = ''; inp.dataset.vehiculoId = '';
+    btn.textContent = 'N/A'; btn.className = 'btn btn-outline btn-sm';
+  } else {
+    _setNACotizacionVehiculo();
+  }
+}
+
+function _setNACotizacionVehiculo() {
+  const inp = document.getElementById('cotizacion-vehiculo');
+  const btn = document.getElementById('btn-na-cotizacion-vehiculo');
+  inp.disabled = true; inp.value = 'Sin vehículo'; inp.dataset.vehiculoId = 'NA';
+  if (btn) { btn.textContent = '✕ Quitar'; btn.className = 'btn btn-secondary btn-sm'; }
+}
+
+function selectCotizacionClienteFromDatalist() {
+  const input = document.getElementById('cotizacion-cliente');
+  const val   = input.value.trim();
+  const c = DB.clientes().find(c => c.nombre.toLowerCase() === val.toLowerCase() || c.id === val);
+  if (c) { input.value = c.nombre; input.dataset.clienteId = c.id; }
+  else   { input.dataset.clienteId = val; }
+  loadVehiculosCotizacionCliente();
+}
+
+function selectCotizacionVehiculoFromDatalist() {
+  const input = document.getElementById('cotizacion-vehiculo');
+  const val   = input.value.trim();
+  const v = DB.vehiculos().find(v => vehiculoDisplayText(v).toLowerCase() === val.toLowerCase() || v.id === val);
+  if (v) { input.value = vehiculoDisplayText(v); input.dataset.vehiculoId = v.id; }
+}
+
+function loadVehiculosCotizacionCliente() {
+  const clienteInp = document.getElementById('cotizacion-cliente');
+  let clienteId = clienteInp.dataset.clienteId || clienteInp.value;
+  if (!clienteId || clienteId === clienteInp.value) {
+    const c = DB.clientes().find(c => c.nombre === clienteInp.value || c.id === clienteInp.value);
+    clienteId = c ? c.id : '';
+  }
+  const datalist = document.getElementById('cotizacion-vehiculo-list');
+  const input    = document.getElementById('cotizacion-vehiculo');
+  if (!clienteId || clienteId === 'NA') {
+    datalist.innerHTML = '';
+    if (clienteId !== 'NA') { input.value = ''; input.dataset.vehiculoId = ''; }
+    return;
+  }
+  const vehs = DB.vehiculos().filter(v => v.clienteId === clienteId);
+  datalist.innerHTML = vehs.map(v => `<option value="${vehiculoDisplayText(v)}"></option>`).join('');
+  input.value = ''; input.dataset.vehiculoId = '';
+}
+
+function addCotizacionRefaccionLine() {
+  currentCotizacionLineas.push({ id: DB.uid(), partId: '', sku: '', nombre: '', categoria: '', cantidad: 1, precioUnitario: 0, subtotal: 0 });
+  renderCotizacionRefaccionesTable();
+  calculateCotizacionTotals();
+}
+
+function removeCotizacionRefaccionLine(idx) {
+  currentCotizacionLineas.splice(idx, 1);
+  renderCotizacionRefaccionesTable();
+  calculateCotizacionTotals();
+}
+
+function updateCotizacionRefaccionLine(idx, field, value) {
+  const linea = currentCotizacionLineas[idx];
+  if (field === 'partId') {
+    const ref = DB.refacciones().find(r => r.id === value);
+    if (ref) {
+      linea.partId = value; linea.sku = ref.sku || ''; linea.nombre = ref.nombre;
+      linea.categoria = ref.categoria || ''; linea.precioUnitario = ref.precio;
+      linea.subtotal = ref.precio * (+linea.cantidad || 1);
+    }
+  } else if (field === 'cantidad') {
+    linea.cantidad = +value || 1;
+    linea.subtotal = (+linea.precioUnitario || 0) * linea.cantidad;
+  } else if (field === 'precioUnitario') {
+    linea.precioUnitario = +value || 0;
+    linea.subtotal = linea.precioUnitario * (+linea.cantidad || 1);
+  }
+  renderCotizacionRefaccionesTable();
+  calculateCotizacionTotals();
+}
+
+function renderCotizacionRefaccionesTable() {
+  let html = '';
+  currentCotizacionLineas.forEach((linea, idx) => {
+    const dlId  = `cot-ref-list-${idx}`;
+    const skuId = `cot-ref-sku-list-${idx}`;
+    const sName = (linea.nombre||'').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const sSku  = (linea.sku||'').replace(/"/g,'&quot;');
+    const cat   = linea.categoria
+      ? `<div id="cot-ref-cat-${idx}" style="font-size:10px;color:var(--muted);margin-top:2px">${linea.categoria}</div>`
+      : `<div id="cot-ref-cat-${idx}"></div>`;
+    html += `<tr>
+      <td><input type="text" id="cot-ref-sku-${idx}" value="${sSku}" list="${skuId}"
+            oninput="lookupCotizacionRefaccionBySku(${idx})" placeholder="Ej: 11829"
+            style="font-size:12px;width:100%;padding:4px;border:1px solid var(--border);border-radius:4px">
+          <datalist id="${skuId}"></datalist></td>
+      <td><input type="text" class="form-control ref-autocomplete" id="cot-ref-input-${idx}" list="${dlId}"
+            value="${sName}" onchange="selectCotizacionRefaccionFromDatalist(${idx})"
+            oninput="filterRefacciones(${idx},'${dlId}')"
+            placeholder="Buscar refacción..." style="font-size:12px">
+          <datalist id="${dlId}"></datalist>${cat}</td>
+      <td><input type="number" id="cot-ref-cant-${idx}" class="form-control" value="${linea.cantidad}"
+            onchange="updateCotizacionRefaccionLine(${idx},'cantidad',this.value)" min="1" style="font-size:12px"></td>
+      <td><input type="number" id="cot-ref-precio-${idx}" class="form-control" value="${linea.precioUnitario}"
+            onchange="updateCotizacionRefaccionLine(${idx},'precioUnitario',this.value)" step="0.01" style="font-size:12px"></td>
+      <td id="cot-ref-subtotal-${idx}"><strong>${fmt(linea.subtotal)}</strong></td>
+      <td><button class="btn btn-danger btn-sm btn-icon" onclick="removeCotizacionRefaccionLine(${idx})">🗑</button></td>
+    </tr>`;
+  });
+  document.getElementById('cotizacion-refacciones-tbody').innerHTML = html ||
+    '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">Sin refacciones agregadas</td></tr>';
+}
+
+function calculateCotizacionTotals() {
+  const totalMat = currentCotizacionLineas.reduce((s,l) => s + (+l.subtotal||0), 0);
+  const manoObra = +document.getElementById('cotizacion-mano-obra').value || 0;
+  document.getElementById('cot-total-material').textContent = fmt(totalMat);
+  document.getElementById('cot-total-mano').textContent     = fmt(manoObra);
+  document.getElementById('cot-total-final').textContent    = fmt(totalMat + manoObra);
+}
+
+function lookupCotizacionRefaccionBySku(idx) {
+  const skuEl  = document.getElementById(`cot-ref-sku-${idx}`);
+  const skuLst = document.getElementById(`cot-ref-sku-list-${idx}`);
+  const val    = skuEl.value.trim();
+  if (!val) { skuEl.style.borderColor = ''; skuEl.style.background = ''; if (skuLst) skuLst.innerHTML = ''; return; }
+  const refs = DB.refacciones();
+  if (skuLst) skuLst.innerHTML = refs.filter(r => r.sku && String(r.sku).toLowerCase().startsWith(val.toLowerCase())).slice(0,20).map(r=>`<option value="${String(r.sku)}">${r.nombre}</option>`).join('');
+  const ref = refs.find(r => r.sku && String(r.sku).toLowerCase() === val.toLowerCase());
+  if (ref) {
+    const l = currentCotizacionLineas[idx];
+    l.partId = ref.id; l.sku = String(ref.sku); l.nombre = ref.nombre;
+    l.categoria = ref.categoria||''; l.precioUnitario = +ref.precio||0;
+    l.subtotal = l.precioUnitario * (+l.cantidad||1);
+    const nEl = document.getElementById(`cot-ref-input-${idx}`);
+    const pEl = document.getElementById(`cot-ref-precio-${idx}`);
+    const sEl = document.getElementById(`cot-ref-subtotal-${idx}`);
+    const cEl = document.getElementById(`cot-ref-cat-${idx}`);
+    if (nEl) nEl.value = ref.nombre;
+    if (pEl) pEl.value = +ref.precio||0;
+    if (sEl) sEl.innerHTML = `<strong>${fmt(l.subtotal)}</strong>`;
+    if (cEl) cEl.textContent = ref.categoria||'';
+    skuEl.style.borderColor = 'var(--success)'; skuEl.style.background = '#f0fdf4';
+    calculateCotizacionTotals();
+  } else {
+    skuEl.style.borderColor = val.length >= 3 ? 'var(--danger)' : '';
+    skuEl.style.background  = val.length >= 3 ? '#fff5f5' : '';
+  }
+}
+
+function selectCotizacionRefaccionFromDatalist(idx) {
+  const input = document.getElementById(`cot-ref-input-${idx}`);
+  const val   = input.value.trim();
+  const ref   = DB.refacciones().find(r => r.nombre.toLowerCase() === val.toLowerCase() || r.id === val || r.nombre.toLowerCase().includes(val.toLowerCase()));
+  if (ref) { input.value = ref.nombre; input.dataset.refaccionId = ref.id; updateCotizacionRefaccionLine(idx, 'partId', ref.id); }
+  else     { input.dataset.refaccionId = ''; }
+}
+
+function saveCotizacion() {
+  const clienteId  = resolveClienteId('cotizacion-cliente');
+  const vehInput   = document.getElementById('cotizacion-vehiculo');
+  const vehiculoId = vehInput.dataset.vehiculoId || (vehInput.value === 'Sin vehículo' ? 'NA' : vehInput.value);
+  const id       = document.getElementById('cotizacion-id').value;
+  let rows       = DB.cotizaciones();
+  const existing = id ? rows.find(c => c.id === id) : null;
+  const now      = new Date().toISOString();
+  const totalMat = currentCotizacionLineas.reduce((s,l) => s + (+l.subtotal||0), 0);
+  const obj = {
+    id: id || DB.uid(), clienteId, vehiculoId,
+    manoObra: +document.getElementById('cotizacion-mano-obra').value || 0,
+    lineas: currentCotizacionLineas,
+    totalMaterial: totalMat,
+    notas: document.getElementById('cotizacion-notas').value.trim(),
+    creadoEn: existing?.creadoEn || now
+  };
+  if (id) rows = rows.map(c => c.id === id ? obj : c);
+  else    rows.push(obj);
+  DB.saveCotizaciones(rows);
+  closeModal('modal-cotizacion');
+  renderCotizaciones();
+  toast(id ? 'Cotización actualizada.' : 'Cotización creada.');
+}
+
+function editCotizacion(id) {
+  const c = DB.cotizaciones().find(c => c.id === id);
+  if (!c) return;
+  _resetNACotizacion();
+  document.getElementById('cotizacion-id').value       = c.id;
+  document.getElementById('cotizacion-notas').value    = c.notas || '';
+  document.getElementById('cotizacion-mano-obra').value = c.manoObra || '';
+
+  if (c.clienteId === 'NA') {
+    const inp = document.getElementById('cotizacion-cliente');
+    inp.disabled = true; inp.value = 'Sin cliente'; inp.dataset.clienteId = 'NA';
+    const btn = document.getElementById('btn-na-cotizacion-cliente');
+    if (btn) { btn.textContent = '✕ Quitar'; btn.className = 'btn btn-secondary btn-sm'; }
+  } else {
+    populateClienteSelect('cotizacion-cliente', c.clienteId);
+  }
+
+  if (c.vehiculoId === 'NA') {
+    _setNACotizacionVehiculo();
+  } else {
+    setTimeout(() => {
+      loadVehiculosCotizacionCliente();
+      setTimeout(() => {
+        const v = DB.vehiculos().find(v => v.id === c.vehiculoId);
+        const inp = document.getElementById('cotizacion-vehiculo');
+        if (v) { inp.value = vehiculoDisplayText(v); inp.dataset.vehiculoId = v.id; }
+        else   { inp.value = ''; inp.dataset.vehiculoId = ''; }
+      }, 0);
+    }, 0);
+  }
+
+  currentCotizacionLineas = JSON.parse(JSON.stringify(c.lineas || []));
+  renderCotizacionRefaccionesTable();
+  calculateCotizacionTotals();
+  openModal('modal-cotizacion');
+}
+
+function deleteCotizacion(id) {
+  if (!confirm('¿Eliminar cotización?')) return;
+  DB.saveCotizaciones(DB.cotizaciones().filter(c => c.id !== id));
+  renderCotizaciones();
+  toast('Cotización eliminada.', 'info');
+}
+
+function viewCotizacion(id) {
+  const c = DB.cotizaciones().find(c => c.id === id);
+  if (!c) return;
+
+  const cliente   = getClienteName(c.clienteId);
+  const vObj      = DB.vehiculos().find(v => v.id === c.vehiculoId);
+  const totalMat  = +c.totalMaterial || 0;
+  const totalMano = +c.manoObra || 0;
+  const total     = totalMat + totalMano;
+  const folioNum  = c.id.slice(-4).toUpperCase();
+
+  const vehHtml = vObj ? (() => {
+    const mma = [vObj.marca, vObj.modelo, vObj.anio].filter(Boolean).join(' ');
+    return `<div style="margin-bottom:4px"><strong style="font-size:14px">${mma||'—'}</strong></div>
+      ${vObj.numeroUnidad ? `<div style="margin-bottom:3px"><span style="color:#6b7280;font-size:12px">Núm. Unidad:</span> <strong>${vObj.numeroUnidad}</strong></div>` : ''}
+      ${vObj.placa        ? `<div style="margin-bottom:3px"><span style="color:#6b7280;font-size:12px">Placa:</span> ${vObj.placa}</div>` : ''}
+      ${vObj.vin          ? `<div><span style="color:#6b7280;font-size:12px">VIN:</span> <span style="font-family:monospace;font-size:11px;color:#374151">${vObj.vin}</span></div>` : ''}`;
+  })() : '<span style="color:#9ca3af">—</span>';
+
+  const lineasHtml = (c.lineas && c.lineas.length)
+    ? `<table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="background:#1e3a8a">
+          <th style="padding:9px 10px;text-align:left;color:#fff;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">SKU</th>
+          <th style="padding:9px 10px;text-align:left;color:#fff;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Descripción</th>
+          <th style="padding:9px 10px;text-align:center;color:#fff;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Cant.</th>
+          <th style="padding:9px 10px;text-align:right;color:#fff;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">P. Unit.</th>
+          <th style="padding:9px 10px;text-align:right;color:#fff;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Subtotal</th>
+        </tr></thead>
+        <tbody>${c.lineas.map((l,li) => `<tr style="background:${li%2===0?'#fff':'#f8fafc'}">
+          <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;color:#6b7280;font-family:monospace;font-size:12px">${l.sku||'—'}</td>
+          <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">${l.nombre||'—'}</td>
+          <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:center">${l.cantidad}</td>
+          <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right">${fmt(l.precioUnitario)}</td>
+          <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:600">${fmt(l.subtotal)}</td>
+        </tr>`).join('')}</tbody>
+      </table>`
+    : `<p style="color:#9ca3af;text-align:center;padding:16px;font-size:13px">Sin refacciones agregadas</p>`;
+
+  const secLabel = txt =>
+    `<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#1e3a8a;border-left:3px solid #dc2626;padding-left:8px;margin-bottom:10px">${txt}</div>`;
+
+  document.getElementById('detalle-titulo').textContent = `Cotización #${folioNum}`;
+  document.getElementById('detalle-body').innerHTML = `
+    <div id="print-area">
+      <div class="print-header" style="display:none;margin-bottom:20px">
+        <div style="background:linear-gradient(135deg,#7f1d1d 0%,#1e3a8a 100%);border-radius:10px;padding:18px 22px;display:flex;align-items:center;gap:16px;color:#fff">
+          <div style="flex-shrink:0;background:#fff;border-radius:8px;padding:4px;display:flex;align-items:center;justify-content:center">
+            <img src="Logo Muelles y Mofles.png" alt="Muelles y Mofles La Flecha" style="height:56px;width:auto;display:block">
+          </div>
+          <div style="flex:1">
+            <div style="font-size:20px;font-weight:800;letter-spacing:-.01em">Muelles y Mofles La Flecha</div>
+            <div style="font-size:12px;opacity:.85;margin-top:2px">Cotización</div>
+          </div>
+          <div style="text-align:right;background:rgba(255,255,255,.15);border-radius:8px;padding:10px 14px">
+            <div style="font-size:11px;opacity:.8;letter-spacing:.04em;text-transform:uppercase">Folio</div>
+            <div style="font-size:22px;font-weight:800;letter-spacing:-.01em">#${folioNum}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="info-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+        <div style="border:1px solid #e5e7eb;border-radius:8px;padding:14px">
+          ${secLabel('Cliente')}
+          <div style="font-size:15px;font-weight:700">${cliente}</div>
+        </div>
+        <div style="border:1px solid #e5e7eb;border-radius:8px;padding:14px">
+          ${secLabel('Vehículo')}
+          ${c.vehiculoId === 'NA' ? '<div style="color:#9ca3af">N/A</div>' : vehHtml}
+        </div>
+      </div>
+
+      <div style="margin-bottom:16px">
+        ${secLabel('Refacciones y Piezas')}
+        ${lineasHtml}
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+        <div style="border:1px solid #e5e7eb;border-radius:8px;padding:14px;min-width:250px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:7px;font-size:13px">
+            <span style="color:#6b7280">Material:</span><span>${fmt(totalMat)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:13px">
+            <span style="color:#6b7280">Mano de Obra:</span><span>${fmt(totalMano)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:17px;font-weight:800;border-top:2px solid #1e3a8a;padding-top:10px">
+            <span style="color:#1e3a8a">TOTAL:</span><span style="color:#dc2626">${fmt(total)}</span>
+          </div>
+        </div>
+      </div>
+
+      ${c.notas ? `<div style="margin-bottom:14px">
+        ${secLabel('Notas')}
+        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;font-size:13px">${c.notas}</div>
+      </div>` : ''}
+
+      <div style="margin-bottom:8px">
+        ${secLabel('Fecha de Cotización')}
+        <div style="font-size:13px;color:#374151">${fmtDateTime(c.creadoEn)}</div>
+      </div>
+
+      <div class="print-header" style="display:none;margin-top:24px;padding-top:12px;border-top:1px solid #e5e7eb;text-align:center;font-size:11px;color:#9ca3af">
+        Documento generado el ${fmtDateTime(new Date().toISOString())}
+      </div>
+    </div>`;
+
+  document.querySelectorAll('#print-area .print-header').forEach(el => el.style.display = 'none');
+  openModal('modal-orden-detalle');
 }
 
 /* ═══════════════════════════════════════════════════════════════ INIT */
