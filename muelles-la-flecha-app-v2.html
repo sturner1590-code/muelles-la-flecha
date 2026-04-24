@@ -1914,7 +1914,13 @@ function toggleNACliente() {
   } else {
     inp.disabled = true; inp.value = 'Sin cliente'; inp.dataset.clienteId = 'NA';
     btn.textContent = '✕ Quitar'; btn.className = 'btn btn-secondary btn-sm';
-    _setNAVehiculo();
+    // Mostrar todos los vehículos en el datalist cuando no hay cliente
+    const datalist = document.getElementById('orden-vehiculo-list');
+    const vehInp = document.getElementById('orden-vehiculo');
+    datalist.innerHTML = DB.vehiculos().map(v => `<option value="${vehiculoDisplayText(v)}"></option>`).join('');
+    vehInp.disabled = false;
+    vehInp.value = '';
+    vehInp.dataset.vehiculoId = '';
   }
 }
 
