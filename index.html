@@ -636,111 +636,6 @@
   </div>
 </div>
 
-<!-- MODAL CLIENTE INLINE -->
-<div class="modal-backdrop" id="modal-cliente-inline">
-  <div class="modal">
-    <div class="modal-header">
-      <h3>Crear Cliente Rápido</h3>
-      <button class="modal-close" onclick="closeModal('modal-cliente-inline')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label>Nombre *</label>
-        <input class="form-control" id="inline-cliente-nombre" placeholder="Juan Perez">
-      </div>
-      <div class="form-group">
-        <label>Teléfono *</label>
-        <input class="form-control" id="inline-cliente-tel" placeholder="8614556677">
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Razón Social</label>
-          <input class="form-control" id="inline-cliente-razon" placeholder="Empresa">
-        </div>
-        <div class="form-group">
-          <label>Tipo</label>
-          <select class="form-control" id="inline-cliente-tipo">
-            <option value="contado">Contado</option>
-            <option value="credito">Crédito</option>
-          </select>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('modal-cliente-inline')">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveInlineCliente()">Crear y Usar</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL VEHICULO INLINE -->
-<div class="modal-backdrop" id="modal-vehiculo-inline">
-  <div class="modal">
-    <div class="modal-header">
-      <h3>Crear Vehiculo Rápido</h3>
-      <button class="modal-close" onclick="closeModal('modal-vehiculo-inline')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label>Cliente asociado</label>
-        <input type="text" class="form-control" id="inline-vehiculo-cliente" list="inline-vehiculo-cliente-list" placeholder="Buscar cliente...">
-        <datalist id="inline-vehiculo-cliente-list"></datalist>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Marca *</label>
-          <select class="form-control" id="inline-vehiculo-marca" onchange="onMarcaChange('inline-vehiculo')">
-            <option value="">— Seleccionar marca —</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Modelo *</label>
-          <select class="form-control" id="inline-vehiculo-modelo" onchange="onModeloChange('inline-vehiculo')" disabled>
-            <option value="">— Seleccionar modelo —</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Año</label>
-          <select class="form-control" id="inline-vehiculo-anio" disabled>
-            <option value="">— Año —</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Placa</label>
-          <input class="form-control" id="inline-vehiculo-placa" placeholder="ABC-123">
-        </div>
-      </div>
-      <div class="form-group">
-        <label>VIN <span style="font-size:11px;color:var(--muted);font-weight:normal">— 17 caracteres · auto-decodifica marca/modelo/año</span></label>
-        <div style="display:flex;gap:8px;align-items:stretch">
-          <input class="form-control" id="inline-vehiculo-vin" placeholder="1HGBH41JXMN109186" maxlength="17"
-            style="text-transform:uppercase;letter-spacing:.08em;font-family:monospace"
-            oninput="onVinInput('inline-vehiculo')">
-          <button type="button" class="btn btn-secondary btn-sm" id="inline-vehiculo-vin-btn"
-            onclick="decodeVin('inline-vehiculo')" style="white-space:nowrap;padding:0 12px">🔍 Decodificar</button>
-        </div>
-        <div id="inline-vehiculo-vin-status" style="font-size:12px;margin-top:5px;min-height:16px"></div>
-      </div>
-      <div class="form-group">
-        <label>Color</label>
-        <input class="form-control" id="inline-vehiculo-color" placeholder="Blanco">
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Número Unidad</label>
-          <input class="form-control" id="inline-vehiculo-num" placeholder="UNI-001">
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('modal-vehiculo-inline')">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveInlineVehiculo()">Crear y Usar</button>
-    </div>
-  </div>
-</div>
-
 <!-- MODAL COTIZACION -->
 <div class="modal-backdrop" id="modal-cotizacion">
   <div class="modal large">
@@ -972,6 +867,111 @@
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('modal-import-preview')">Cancelar</button>
       <button class="btn btn-primary" onclick="confirmImport()">Importar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CLIENTE INLINE -->
+<div class="modal-backdrop" id="modal-cliente-inline">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Crear Cliente Rápido</h3>
+      <button class="modal-close" onclick="closeModal('modal-cliente-inline')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Nombre *</label>
+        <input class="form-control" id="inline-cliente-nombre" placeholder="Juan Perez">
+      </div>
+      <div class="form-group">
+        <label>Teléfono *</label>
+        <input class="form-control" id="inline-cliente-tel" placeholder="8614556677">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Razón Social</label>
+          <input class="form-control" id="inline-cliente-razon" placeholder="Empresa">
+        </div>
+        <div class="form-group">
+          <label>Tipo</label>
+          <select class="form-control" id="inline-cliente-tipo">
+            <option value="contado">Contado</option>
+            <option value="credito">Crédito</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-cliente-inline')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveInlineCliente()">Crear y Usar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL VEHICULO INLINE -->
+<div class="modal-backdrop" id="modal-vehiculo-inline">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Crear Vehiculo Rápido</h3>
+      <button class="modal-close" onclick="closeModal('modal-vehiculo-inline')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Cliente asociado</label>
+        <input type="text" class="form-control" id="inline-vehiculo-cliente" list="inline-vehiculo-cliente-list" placeholder="Buscar cliente...">
+        <datalist id="inline-vehiculo-cliente-list"></datalist>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Marca *</label>
+          <select class="form-control" id="inline-vehiculo-marca" onchange="onMarcaChange('inline-vehiculo')">
+            <option value="">— Seleccionar marca —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Modelo *</label>
+          <select class="form-control" id="inline-vehiculo-modelo" onchange="onModeloChange('inline-vehiculo')" disabled>
+            <option value="">— Seleccionar modelo —</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Año</label>
+          <select class="form-control" id="inline-vehiculo-anio" disabled>
+            <option value="">— Año —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Placa</label>
+          <input class="form-control" id="inline-vehiculo-placa" placeholder="ABC-123">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>VIN <span style="font-size:11px;color:var(--muted);font-weight:normal">— 17 caracteres · auto-decodifica marca/modelo/año</span></label>
+        <div style="display:flex;gap:8px;align-items:stretch">
+          <input class="form-control" id="inline-vehiculo-vin" placeholder="1HGBH41JXMN109186" maxlength="17"
+            style="text-transform:uppercase;letter-spacing:.08em;font-family:monospace"
+            oninput="onVinInput('inline-vehiculo')">
+          <button type="button" class="btn btn-secondary btn-sm" id="inline-vehiculo-vin-btn"
+            onclick="decodeVin('inline-vehiculo')" style="white-space:nowrap;padding:0 12px">🔍 Decodificar</button>
+        </div>
+        <div id="inline-vehiculo-vin-status" style="font-size:12px;margin-top:5px;min-height:16px"></div>
+      </div>
+      <div class="form-group">
+        <label>Color</label>
+        <input class="form-control" id="inline-vehiculo-color" placeholder="Blanco">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Número Unidad</label>
+          <input class="form-control" id="inline-vehiculo-num" placeholder="UNI-001">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-vehiculo-inline')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveInlineVehiculo()">Crear y Usar</button>
     </div>
   </div>
 </div>
