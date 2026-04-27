@@ -101,6 +101,8 @@
     .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200; align-items: center; justify-content: center; padding: 16px; }
     .modal-backdrop.open { display: flex; }
     .modal { background: var(--white); border-radius: 10px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+    dialog.modal-dialog { padding: 0; border: none; border-radius: 10px; width: calc(100% - 32px); max-width: 500px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+    dialog.modal-dialog::backdrop { background: rgba(0,0,0,.45); }
     .modal.large { max-width: 700px; }
     .modal-header { padding: 16px 20px; border-bottom: 2px solid var(--primary); display: flex; align-items: center; justify-content: space-between; }
     .modal-header h3 { font-size: 16px; font-weight: 700; color: var(--secondary); }
@@ -186,10 +188,15 @@
     tr.prioridad-urgente td:first-child { border-left: 4px solid #dc2626; }
     /* ── IMPRESIÓN ── */
     @media print {
-      body * { visibility: hidden; }
-      #print-area, #print-area * { visibility: visible; }
-      #print-area { position: fixed; inset: 0; padding: 24px; font-size: 13px; background: #fff; }
+      .sidebar, .topbar, .content, .overlay, #loading-screen, #toast-container { display: none !important; }
+      .modal-backdrop { position: static !important; background: transparent !important; overflow: visible !important; }
+      .modal-backdrop:not(.open) { display: none !important; }
+      .modal { position: static !important; max-height: none !important; overflow: visible !important; box-shadow: none !important; border-radius: 0 !important; width: 100% !important; max-width: 100% !important; margin: 0 !important; }
+      .modal-header, .modal-footer { display: none !important; }
+      .modal-body { padding: 0 !important; overflow: visible !important; max-height: none !important; }
+      #print-area { padding: 20px; font-size: 13px; }
       #print-area .no-print { display: none !important; }
+      #print-area .print-header { display: block !important; }
     }
   </style>
 </head>
@@ -636,111 +643,6 @@
   </div>
 </div>
 
-<!-- MODAL CLIENTE INLINE -->
-<div class="modal-backdrop" id="modal-cliente-inline">
-  <div class="modal">
-    <div class="modal-header">
-      <h3>Crear Cliente Rápido</h3>
-      <button class="modal-close" onclick="closeModal('modal-cliente-inline')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label>Nombre *</label>
-        <input class="form-control" id="inline-cliente-nombre" placeholder="Juan Perez">
-      </div>
-      <div class="form-group">
-        <label>Teléfono *</label>
-        <input class="form-control" id="inline-cliente-tel" placeholder="8614556677">
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Razón Social</label>
-          <input class="form-control" id="inline-cliente-razon" placeholder="Empresa">
-        </div>
-        <div class="form-group">
-          <label>Tipo</label>
-          <select class="form-control" id="inline-cliente-tipo">
-            <option value="contado">Contado</option>
-            <option value="credito">Crédito</option>
-          </select>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('modal-cliente-inline')">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveInlineCliente()">Crear y Usar</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL VEHICULO INLINE -->
-<div class="modal-backdrop" id="modal-vehiculo-inline">
-  <div class="modal">
-    <div class="modal-header">
-      <h3>Crear Vehiculo Rápido</h3>
-      <button class="modal-close" onclick="closeModal('modal-vehiculo-inline')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label>Cliente asociado</label>
-        <input type="text" class="form-control" id="inline-vehiculo-cliente" list="inline-vehiculo-cliente-list" placeholder="Buscar cliente...">
-        <datalist id="inline-vehiculo-cliente-list"></datalist>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Marca *</label>
-          <select class="form-control" id="inline-vehiculo-marca" onchange="onMarcaChange('inline-vehiculo')">
-            <option value="">— Seleccionar marca —</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Modelo *</label>
-          <select class="form-control" id="inline-vehiculo-modelo" onchange="onModeloChange('inline-vehiculo')" disabled>
-            <option value="">— Seleccionar modelo —</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Año</label>
-          <select class="form-control" id="inline-vehiculo-anio" disabled>
-            <option value="">— Año —</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Placa</label>
-          <input class="form-control" id="inline-vehiculo-placa" placeholder="ABC-123">
-        </div>
-      </div>
-      <div class="form-group">
-        <label>VIN <span style="font-size:11px;color:var(--muted);font-weight:normal">— 17 caracteres · auto-decodifica marca/modelo/año</span></label>
-        <div style="display:flex;gap:8px;align-items:stretch">
-          <input class="form-control" id="inline-vehiculo-vin" placeholder="1HGBH41JXMN109186" maxlength="17"
-            style="text-transform:uppercase;letter-spacing:.08em;font-family:monospace"
-            oninput="onVinInput('inline-vehiculo')">
-          <button type="button" class="btn btn-secondary btn-sm" id="inline-vehiculo-vin-btn"
-            onclick="decodeVin('inline-vehiculo')" style="white-space:nowrap;padding:0 12px">🔍 Decodificar</button>
-        </div>
-        <div id="inline-vehiculo-vin-status" style="font-size:12px;margin-top:5px;min-height:16px"></div>
-      </div>
-      <div class="form-group">
-        <label>Color</label>
-        <input class="form-control" id="inline-vehiculo-color" placeholder="Blanco">
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Número Unidad</label>
-          <input class="form-control" id="inline-vehiculo-num" placeholder="UNI-001">
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('modal-vehiculo-inline')">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveInlineVehiculo()">Crear y Usar</button>
-    </div>
-  </div>
-</div>
-
 <!-- MODAL COTIZACION -->
 <div class="modal-backdrop" id="modal-cotizacion">
   <div class="modal large">
@@ -759,7 +661,7 @@
               <input type="text" class="form-control" id="cotizacion-cliente" list="cotizacion-cliente-list" onchange="selectCotizacionClienteFromDatalist()" placeholder="Buscar cliente...">
               <datalist id="cotizacion-cliente-list"></datalist>
             </div>
-            <button class="btn btn-primary btn-sm" onclick="openInlineClienteForm('cotizacion')">+ Nuevo</button>
+            <button class="btn btn-primary btn-sm" onclick="openInlineCotizacionClienteForm()">+ Nuevo</button>
             <button class="btn btn-outline btn-sm" id="btn-na-cotizacion-cliente" onclick="toggleNACotizacionCliente()" title="Marcar como Sin cliente">N/A</button>
           </div>
         </div>
@@ -770,7 +672,7 @@
               <input type="text" class="form-control" id="cotizacion-vehiculo" list="cotizacion-vehiculo-list" onchange="selectCotizacionVehiculoFromDatalist()" placeholder="Buscar vehículo...">
               <datalist id="cotizacion-vehiculo-list"></datalist>
             </div>
-            <button class="btn btn-primary btn-sm" onclick="openInlineVehiculoForm('cotizacion')">+ Nuevo</button>
+            <button class="btn btn-primary btn-sm" onclick="openInlineCotizacionVehiculoForm()">+ Nuevo</button>
             <button class="btn btn-outline btn-sm" id="btn-na-cotizacion-vehiculo" onclick="toggleNACotizacionVehiculo()" title="Marcar como Sin vehículo">N/A</button>
           </div>
         </div>
@@ -976,6 +878,107 @@
   </div>
 </div>
 
+<!-- MODAL CLIENTE INLINE -->
+<dialog class="modal-dialog" id="modal-cliente-inline">
+  <div class="modal-header">
+    <h3>Crear Cliente Rápido</h3>
+    <button class="modal-close" onclick="closeModal('modal-cliente-inline')">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="form-group">
+      <label>Nombre *</label>
+      <input class="form-control" id="inline-cliente-nombre" placeholder="Juan Perez">
+    </div>
+    <div class="form-group">
+      <label>Teléfono *</label>
+      <input class="form-control" id="inline-cliente-tel" placeholder="8614556677">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Razón Social</label>
+        <input class="form-control" id="inline-cliente-razon" placeholder="Empresa">
+      </div>
+      <div class="form-group">
+        <label>Tipo</label>
+        <select class="form-control" id="inline-cliente-tipo">
+          <option value="contado">Contado</option>
+          <option value="credito">Crédito</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline" onclick="closeModal('modal-cliente-inline')">Cancelar</button>
+    <button class="btn btn-primary" onclick="saveInlineCliente()">Crear y Usar</button>
+  </div>
+</dialog>
+
+<!-- MODAL VEHICULO INLINE -->
+<dialog class="modal-dialog" id="modal-vehiculo-inline">
+  <div class="modal-header">
+    <h3>Crear Vehiculo Rápido</h3>
+    <button class="modal-close" onclick="closeModal('modal-vehiculo-inline')">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="form-group">
+      <label>Cliente asociado</label>
+      <input type="text" class="form-control" id="inline-vehiculo-cliente" list="inline-vehiculo-cliente-list" placeholder="Buscar cliente...">
+      <datalist id="inline-vehiculo-cliente-list"></datalist>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Marca *</label>
+        <select class="form-control" id="inline-vehiculo-marca" onchange="onMarcaChange('inline-vehiculo')">
+          <option value="">— Seleccionar marca —</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Modelo *</label>
+        <select class="form-control" id="inline-vehiculo-modelo" onchange="onModeloChange('inline-vehiculo')" disabled>
+          <option value="">— Seleccionar modelo —</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Año</label>
+        <select class="form-control" id="inline-vehiculo-anio" disabled>
+          <option value="">— Año —</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Placa</label>
+        <input class="form-control" id="inline-vehiculo-placa" placeholder="ABC-123">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>VIN <span style="font-size:11px;color:var(--muted);font-weight:normal">— 17 caracteres · auto-decodifica marca/modelo/año</span></label>
+      <div style="display:flex;gap:8px;align-items:stretch">
+        <input class="form-control" id="inline-vehiculo-vin" placeholder="1HGBH41JXMN109186" maxlength="17"
+          style="text-transform:uppercase;letter-spacing:.08em;font-family:monospace"
+          oninput="onVinInput('inline-vehiculo')">
+        <button type="button" class="btn btn-secondary btn-sm" id="inline-vehiculo-vin-btn"
+          onclick="decodeVin('inline-vehiculo')" style="white-space:nowrap;padding:0 12px">🔍 Decodificar</button>
+      </div>
+      <div id="inline-vehiculo-vin-status" style="font-size:12px;margin-top:5px;min-height:16px"></div>
+    </div>
+    <div class="form-group">
+      <label>Color</label>
+      <input class="form-control" id="inline-vehiculo-color" placeholder="Blanco">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Número Unidad</label>
+        <input class="form-control" id="inline-vehiculo-num" placeholder="UNI-001">
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline" onclick="closeModal('modal-vehiculo-inline')">Cancelar</button>
+    <button class="btn btn-primary" onclick="saveInlineVehiculo()">Crear y Usar</button>
+  </div>
+</dialog>
+
 <!-- HIDDEN FILE INPUT -->
 <input type="file" id="hidden-file-input" style="display:none" accept=".xlsx,.xls" onchange="handleFileImport()">
 
@@ -1013,12 +1016,22 @@ const DB = {
       for (let i = 0; i < newData.length; i += BATCH) {
         const chunk = newData.slice(i, i + BATCH);
         sb.from(table).upsert(chunk)
-          .then(({ error }) => { if (error) console.error('[Supabase upsert]', table, i, error.message); });
+          .then(({ error }) => {
+            if (error) {
+              console.error('[Supabase upsert]', table, i, error.message);
+              toast(`⚠️ Error al guardar en ${table}: ${error.message}`, 'danger');
+            }
+          });
       }
     }
     deletedIds.forEach(id => {
       sb.from(table).delete().eq('id', id)
-        .then(({ error }) => { if (error) console.error('[Supabase delete]', table, error.message); });
+        .then(({ error }) => {
+          if (error) {
+            console.error('[Supabase delete]', table, error.message);
+            toast(`⚠️ Error al eliminar en ${table}: ${error.message}`, 'danger');
+          }
+        });
     });
   },
 
@@ -1185,8 +1198,16 @@ function navigate(page) {
 
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('show'); }
 function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('overlay').classList.remove('show'); }
-function openModal(id) { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openModal(id) {
+  const el = document.getElementById(id);
+  if (el.tagName === 'DIALOG') { if (!el.open) el.showModal(); }
+  else el.classList.add('open');
+}
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (el.tagName === 'DIALOG') { if (el.open) el.close(); }
+  else el.classList.remove('open');
+}
 
 function populateDatalist(dataListId, data, displayField, valueField = 'id') {
   const datalist = document.getElementById(dataListId);
@@ -1919,12 +1940,12 @@ function viewOrden(id) {
 
   // Encabezado de sección con color de fondo
   const secBox = (color, icon, title, content) =>
-    `<div style="border-radius:10px;overflow:hidden;border:1.5px solid ${color}20;box-shadow:0 1px 4px ${color}18">
-       <div style="background:${color};padding:8px 14px;display:flex;align-items:center;gap:7px">
-         <span style="font-size:14px">${icon}</span>
-         <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#fff">${title}</span>
+    `<div style="border-radius:8px;overflow:hidden;border:1.5px solid ${color}20;box-shadow:0 1px 3px ${color}15">
+       <div style="background:${color};padding:5px 12px;display:flex;align-items:center;gap:6px">
+         <span style="font-size:12px">${icon}</span>
+         <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#fff">${title}</span>
        </div>
-       <div style="padding:14px;background:#fff">${content}</div>
+       <div style="padding:8px 12px;background:#fff">${content}</div>
      </div>`;
 
   const secLabel = (txt) =>
@@ -1959,21 +1980,21 @@ function viewOrden(id) {
         ${badge(PRIORITY_LABELS, o.prioridad||'normal')}
       </div>
 
-      <!-- ══ INFO PRINCIPAL (3 tarjetas coloreadas) ══ -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px">
+      <!-- ══ DATOS DEL SERVICIO (barra compacta sin recuadro) ══ -->
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;padding:7px 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:12px">
+        <span><span style="color:#6b7280">Estado:</span> <span class="badge ${badgeClass}" style="margin-left:3px">${badgeLabel}</span></span>
+        <span style="color:#d1d5db">·</span>
+        <span><span style="color:#6b7280">Prioridad:</span> ${badge(PRIORITY_LABELS, o.prioridad||'normal')}</span>
+        <span style="color:#d1d5db">·</span>
+        <span><span style="color:#6b7280">📅 Creada:</span> <strong>${fmtDate(o.creadoEn)||'—'}</strong></span>
+        ${o.iniciadoEn ? `<span style="color:#d1d5db">·</span><span><span style="color:#6b7280">⚙️ Iniciada:</span> <strong>${fmtDate(o.iniciadoEn)}</strong></span>` : ''}
+        ${o.completadoEn ? `<span style="color:#d1d5db">·</span><span><span style="color:#6b7280">✅ Completada:</span> <strong>${fmtDate(o.completadoEn)}</strong></span>` : ''}
+      </div>
 
+      <!-- ══ CLIENTE + VEHÍCULO (2 tarjetas coloreadas) ══ -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
         ${secBox('#dc2626','👤','Cliente', clienteHtml)}
-
         ${secBox('#1e3a8a','🚗','Vehículo', vehHtml)}
-
-        ${secBox('#047857','📋','Datos del Servicio',
-          `<div style="margin-bottom:6px;font-size:12px"><span style="color:#6b7280">Estado:</span> <span class="badge ${badgeClass}" style="margin-left:4px">${badgeLabel}</span></div>
-           <div style="margin-bottom:6px;font-size:12px"><span style="color:#6b7280">Prioridad:</span> ${badge(PRIORITY_LABELS, o.prioridad||'normal')}</div>
-           <hr style="border:none;border-top:1px solid #e5e7eb;margin:8px 0">
-           <div style="margin-bottom:4px;font-size:12px"><span style="color:#6b7280">📅 Creada:</span> <strong>${fmtDateTime(o.creadoEn)}</strong></div>
-           <div style="margin-bottom:4px;font-size:12px"><span style="color:#6b7280">⚙️ Iniciada:</span> <strong>${fmtDateTime(o.iniciadoEn)}</strong></div>
-           <div style="font-size:12px"><span style="color:#6b7280">✅ Completada:</span> <strong>${fmtDateTime(o.completadoEn)}</strong></div>`
-        )}
       </div>
 
       <!-- ══ DESCRIPCIÓN ══ -->
@@ -2038,6 +2059,7 @@ function printOrden() {
 }
 
 function openNewOrdenModal() {
+  _inlineContext = 'orden';
   document.getElementById('orden-id').value = '';
   ['orden-descripcion','orden-notas','orden-mano-obra'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('orden-estado').value = 'recibido';
@@ -2453,11 +2475,15 @@ function selectRefaccionFromDatalist(idx) {
 /* ═══════════════════════════════════════════════════════════════ INLINE CLIENTE/VEHICULO */
 let _inlineContext = 'orden'; // 'orden' | 'cotizacion'
 
-function openInlineClienteForm(context = 'orden') {
-  _inlineContext = context;
+function openInlineClienteForm() {
   ['inline-cliente-nombre','inline-cliente-tel','inline-cliente-razon'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('inline-cliente-tipo').value = 'contado';
   openModal('modal-cliente-inline');
+}
+
+function openInlineCotizacionClienteForm() {
+  _inlineContext = 'cotizacion';
+  openInlineClienteForm();
 }
 
 function saveInlineCliente() {
@@ -2486,8 +2512,7 @@ function saveInlineCliente() {
   toast('Cliente creado y seleccionado.');
 }
 
-function openInlineVehiculoForm(context = 'orden') {
-  _inlineContext = context;
+function openInlineVehiculoForm() {
   const clienteId = resolveClienteId(_inlineContext === 'cotizacion' ? 'cotizacion-cliente' : 'orden-cliente') || 'NA';
   populateClienteSelect('inline-vehiculo-cliente', clienteId);
   ['inline-vehiculo-placa','inline-vehiculo-vin','inline-vehiculo-color','inline-vehiculo-num'].forEach(id=>document.getElementById(id).value='');
@@ -2499,6 +2524,11 @@ function openInlineVehiculoForm(context = 'orden') {
   document.getElementById('inline-vehiculo-vin-status').textContent = '';
   document.getElementById('inline-vehiculo-vin').style.borderColor = '';
   openModal('modal-vehiculo-inline');
+}
+
+function openInlineCotizacionVehiculoForm() {
+  _inlineContext = 'cotizacion';
+  openInlineVehiculoForm();
 }
 
 function saveInlineVehiculo() {
@@ -2760,6 +2790,7 @@ function renderCotizaciones() {
 }
 
 function openNewCotizacionModal() {
+  _inlineContext = 'cotizacion';
   document.getElementById('cotizacion-id').value = '';
   ['cotizacion-notas','cotizacion-mano-obra'].forEach(id => document.getElementById(id).value = '');
   _resetNACotizacion();
@@ -2987,6 +3018,7 @@ function saveCotizacion() {
 }
 
 function editCotizacion(id) {
+  _inlineContext = 'cotizacion';
   const c = DB.cotizaciones().find(c => c.id === id);
   if (!c) return;
   _resetNACotizacion();
@@ -3090,12 +3122,17 @@ function viewCotizacion(id) {
         </div>
       </div>
 
-      <div class="info-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
-        <div style="border:1px solid #e5e7eb;border-radius:8px;padding:14px">
+      <!-- ══ FECHA COTIZACIÓN (barra compacta) ══ -->
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;padding:7px 12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:12px">
+        <span><span style="color:#6b7280">📅 Fecha:</span> <strong>${fmtDate(c.creadoEn)||'—'}</strong></span>
+      </div>
+
+      <div class="info-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div style="border:1px solid #e5e7eb;border-radius:8px;padding:8px 12px">
           ${secLabel('Cliente')}
-          <div style="font-size:15px;font-weight:700">${cliente}</div>
+          <div style="font-size:14px;font-weight:700">${cliente}</div>
         </div>
-        <div style="border:1px solid #e5e7eb;border-radius:8px;padding:14px">
+        <div style="border:1px solid #e5e7eb;border-radius:8px;padding:8px 12px">
           ${secLabel('Vehículo')}
           ${c.vehiculoId === 'NA' ? '<div style="color:#9ca3af">N/A</div>' : vehHtml}
         </div>
@@ -3124,11 +3161,6 @@ function viewCotizacion(id) {
         ${secLabel('Notas')}
         <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;font-size:13px">${c.notas}</div>
       </div>` : ''}
-
-      <div style="margin-bottom:8px">
-        ${secLabel('Fecha de Cotización')}
-        <div style="font-size:13px;color:#374151">${fmtDateTime(c.creadoEn)}</div>
-      </div>
 
       <div class="print-header" style="display:none;margin-top:24px;padding-top:12px;border-top:1px solid #e5e7eb;text-align:center;font-size:11px;color:#9ca3af">
         Documento generado el ${fmtDateTime(new Date().toISOString())}

@@ -186,10 +186,15 @@
     tr.prioridad-urgente td:first-child { border-left: 4px solid #dc2626; }
     /* ── IMPRESIÓN ── */
     @media print {
-      body * { visibility: hidden; }
-      #print-area, #print-area * { visibility: visible; }
-      #print-area { position: fixed; inset: 0; padding: 24px; font-size: 13px; background: #fff; }
+      .sidebar, .topbar, .content, .overlay, #loading-screen, #toast-container { display: none !important; }
+      .modal-backdrop { position: static !important; background: transparent !important; overflow: visible !important; }
+      .modal-backdrop:not(.open) { display: none !important; }
+      .modal { position: static !important; max-height: none !important; overflow: visible !important; box-shadow: none !important; border-radius: 0 !important; width: 100% !important; max-width: 100% !important; margin: 0 !important; }
+      .modal-header, .modal-footer { display: none !important; }
+      .modal-body { padding: 0 !important; overflow: visible !important; max-height: none !important; }
+      #print-area { padding: 20px; font-size: 13px; }
       #print-area .no-print { display: none !important; }
+      #print-area .print-header { display: block !important; }
     }
   </style>
 </head>
@@ -1919,12 +1924,12 @@ function viewOrden(id) {
 
   // Encabezado de sección con color de fondo
   const secBox = (color, icon, title, content) =>
-    `<div style="border-radius:10px;overflow:hidden;border:1.5px solid ${color}20;box-shadow:0 1px 4px ${color}18">
-       <div style="background:${color};padding:8px 14px;display:flex;align-items:center;gap:7px">
-         <span style="font-size:14px">${icon}</span>
-         <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#fff">${title}</span>
+    `<div style="border-radius:8px;overflow:hidden;border:1.5px solid ${color}20;box-shadow:0 1px 3px ${color}15">
+       <div style="background:${color};padding:5px 12px;display:flex;align-items:center;gap:6px">
+         <span style="font-size:12px">${icon}</span>
+         <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#fff">${title}</span>
        </div>
-       <div style="padding:14px;background:#fff">${content}</div>
+       <div style="padding:8px 12px;background:#fff">${content}</div>
      </div>`;
 
   const secLabel = (txt) =>
@@ -1959,21 +1964,21 @@ function viewOrden(id) {
         ${badge(PRIORITY_LABELS, o.prioridad||'normal')}
       </div>
 
-      <!-- ══ INFO PRINCIPAL (3 tarjetas coloreadas) ══ -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px">
+      <!-- ══ DATOS DEL SERVICIO (barra compacta sin recuadro) ══ -->
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;padding:7px 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:12px">
+        <span><span style="color:#6b7280">Estado:</span> <span class="badge ${badgeClass}" style="margin-left:3px">${badgeLabel}</span></span>
+        <span style="color:#d1d5db">·</span>
+        <span><span style="color:#6b7280">Prioridad:</span> ${badge(PRIORITY_LABELS, o.prioridad||'normal')}</span>
+        <span style="color:#d1d5db">·</span>
+        <span><span style="color:#6b7280">📅 Creada:</span> <strong>${fmtDate(o.creadoEn)||'—'}</strong></span>
+        ${o.iniciadoEn ? `<span style="color:#d1d5db">·</span><span><span style="color:#6b7280">⚙️ Iniciada:</span> <strong>${fmtDate(o.iniciadoEn)}</strong></span>` : ''}
+        ${o.completadoEn ? `<span style="color:#d1d5db">·</span><span><span style="color:#6b7280">✅ Completada:</span> <strong>${fmtDate(o.completadoEn)}</strong></span>` : ''}
+      </div>
 
+      <!-- ══ CLIENTE + VEHÍCULO (2 tarjetas coloreadas) ══ -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
         ${secBox('#dc2626','👤','Cliente', clienteHtml)}
-
         ${secBox('#1e3a8a','🚗','Vehículo', vehHtml)}
-
-        ${secBox('#047857','📋','Datos del Servicio',
-          `<div style="margin-bottom:6px;font-size:12px"><span style="color:#6b7280">Estado:</span> <span class="badge ${badgeClass}" style="margin-left:4px">${badgeLabel}</span></div>
-           <div style="margin-bottom:6px;font-size:12px"><span style="color:#6b7280">Prioridad:</span> ${badge(PRIORITY_LABELS, o.prioridad||'normal')}</div>
-           <hr style="border:none;border-top:1px solid #e5e7eb;margin:8px 0">
-           <div style="margin-bottom:4px;font-size:12px"><span style="color:#6b7280">📅 Creada:</span> <strong>${fmtDateTime(o.creadoEn)}</strong></div>
-           <div style="margin-bottom:4px;font-size:12px"><span style="color:#6b7280">⚙️ Iniciada:</span> <strong>${fmtDateTime(o.iniciadoEn)}</strong></div>
-           <div style="font-size:12px"><span style="color:#6b7280">✅ Completada:</span> <strong>${fmtDateTime(o.completadoEn)}</strong></div>`
-        )}
       </div>
 
       <!-- ══ DESCRIPCIÓN ══ -->
@@ -3090,12 +3095,17 @@ function viewCotizacion(id) {
         </div>
       </div>
 
-      <div class="info-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
-        <div style="border:1px solid #e5e7eb;border-radius:8px;padding:14px">
+      <!-- ══ FECHA COTIZACIÓN (barra compacta) ══ -->
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;padding:7px 12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:12px">
+        <span><span style="color:#6b7280">📅 Fecha:</span> <strong>${fmtDate(c.creadoEn)||'—'}</strong></span>
+      </div>
+
+      <div class="info-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div style="border:1px solid #e5e7eb;border-radius:8px;padding:8px 12px">
           ${secLabel('Cliente')}
-          <div style="font-size:15px;font-weight:700">${cliente}</div>
+          <div style="font-size:14px;font-weight:700">${cliente}</div>
         </div>
-        <div style="border:1px solid #e5e7eb;border-radius:8px;padding:14px">
+        <div style="border:1px solid #e5e7eb;border-radius:8px;padding:8px 12px">
           ${secLabel('Vehículo')}
           ${c.vehiculoId === 'NA' ? '<div style="color:#9ca3af">N/A</div>' : vehHtml}
         </div>
@@ -3124,11 +3134,6 @@ function viewCotizacion(id) {
         ${secLabel('Notas')}
         <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;font-size:13px">${c.notas}</div>
       </div>` : ''}
-
-      <div style="margin-bottom:8px">
-        ${secLabel('Fecha de Cotización')}
-        <div style="font-size:13px;color:#374151">${fmtDateTime(c.creadoEn)}</div>
-      </div>
 
       <div class="print-header" style="display:none;margin-top:24px;padding-top:12px;border-top:1px solid #e5e7eb;text-align:center;font-size:11px;color:#9ca3af">
         Documento generado el ${fmtDateTime(new Date().toISOString())}
