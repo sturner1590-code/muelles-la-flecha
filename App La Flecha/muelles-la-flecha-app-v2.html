@@ -101,6 +101,8 @@
     .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200; align-items: center; justify-content: center; padding: 16px; }
     .modal-backdrop.open { display: flex; }
     .modal { background: var(--white); border-radius: 10px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+    dialog.modal-dialog { padding: 0; border: none; border-radius: 10px; width: calc(100% - 32px); max-width: 500px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+    dialog.modal-dialog::backdrop { background: rgba(0,0,0,.45); }
     .modal.large { max-width: 700px; }
     .modal-header { padding: 16px 20px; border-bottom: 2px solid var(--primary); display: flex; align-items: center; justify-content: space-between; }
     .modal-header h3 { font-size: 16px; font-weight: 700; color: var(--secondary); }
@@ -660,7 +662,7 @@
               <input type="text" class="form-control" id="cotizacion-cliente" list="cotizacion-cliente-list" onchange="selectCotizacionClienteFromDatalist()" placeholder="Buscar cliente...">
               <datalist id="cotizacion-cliente-list"></datalist>
             </div>
-            <button class="btn btn-primary btn-sm" onclick="openInlineClienteForm('cotizacion')">+ Nuevo</button>
+            <button class="btn btn-primary btn-sm" onclick="openInlineCotizacionClienteForm()">+ Nuevo</button>
             <button class="btn btn-outline btn-sm" id="btn-na-cotizacion-cliente" onclick="toggleNACotizacionCliente()" title="Marcar como Sin cliente">N/A</button>
           </div>
         </div>
@@ -671,7 +673,7 @@
               <input type="text" class="form-control" id="cotizacion-vehiculo" list="cotizacion-vehiculo-list" onchange="selectCotizacionVehiculoFromDatalist()" placeholder="Buscar vehículo...">
               <datalist id="cotizacion-vehiculo-list"></datalist>
             </div>
-            <button class="btn btn-primary btn-sm" onclick="openInlineVehiculoForm('cotizacion')">+ Nuevo</button>
+            <button class="btn btn-primary btn-sm" onclick="openInlineCotizacionVehiculoForm()">+ Nuevo</button>
             <button class="btn btn-outline btn-sm" id="btn-na-cotizacion-vehiculo" onclick="toggleNACotizacionVehiculo()" title="Marcar como Sin vehículo">N/A</button>
           </div>
         </div>
@@ -878,109 +880,105 @@
 </div>
 
 <!-- MODAL CLIENTE INLINE -->
-<div class="modal-backdrop" id="modal-cliente-inline">
-  <div class="modal">
-    <div class="modal-header">
-      <h3>Crear Cliente Rápido</h3>
-      <button class="modal-close" onclick="closeModal('modal-cliente-inline')">✕</button>
+<dialog class="modal-dialog" id="modal-cliente-inline">
+  <div class="modal-header">
+    <h3>Crear Cliente Rápido</h3>
+    <button class="modal-close" onclick="closeModal('modal-cliente-inline')">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="form-group">
+      <label>Nombre *</label>
+      <input class="form-control" id="inline-cliente-nombre" placeholder="Juan Perez">
     </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label>Nombre *</label>
-        <input class="form-control" id="inline-cliente-nombre" placeholder="Juan Perez">
-      </div>
-      <div class="form-group">
-        <label>Teléfono *</label>
-        <input class="form-control" id="inline-cliente-tel" placeholder="8614556677">
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Razón Social</label>
-          <input class="form-control" id="inline-cliente-razon" placeholder="Empresa">
-        </div>
-        <div class="form-group">
-          <label>Tipo</label>
-          <select class="form-control" id="inline-cliente-tipo">
-            <option value="contado">Contado</option>
-            <option value="credito">Crédito</option>
-          </select>
-        </div>
-      </div>
+    <div class="form-group">
+      <label>Teléfono *</label>
+      <input class="form-control" id="inline-cliente-tel" placeholder="8614556677">
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('modal-cliente-inline')">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveInlineCliente()">Crear y Usar</button>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Razón Social</label>
+        <input class="form-control" id="inline-cliente-razon" placeholder="Empresa">
+      </div>
+      <div class="form-group">
+        <label>Tipo</label>
+        <select class="form-control" id="inline-cliente-tipo">
+          <option value="contado">Contado</option>
+          <option value="credito">Crédito</option>
+        </select>
+      </div>
     </div>
   </div>
-</div>
+  <div class="modal-footer">
+    <button class="btn btn-outline" onclick="closeModal('modal-cliente-inline')">Cancelar</button>
+    <button class="btn btn-primary" onclick="saveInlineCliente()">Crear y Usar</button>
+  </div>
+</dialog>
 
 <!-- MODAL VEHICULO INLINE -->
-<div class="modal-backdrop" id="modal-vehiculo-inline">
-  <div class="modal">
-    <div class="modal-header">
-      <h3>Crear Vehiculo Rápido</h3>
-      <button class="modal-close" onclick="closeModal('modal-vehiculo-inline')">✕</button>
+<dialog class="modal-dialog" id="modal-vehiculo-inline">
+  <div class="modal-header">
+    <h3>Crear Vehiculo Rápido</h3>
+    <button class="modal-close" onclick="closeModal('modal-vehiculo-inline')">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="form-group">
+      <label>Cliente asociado</label>
+      <input type="text" class="form-control" id="inline-vehiculo-cliente" list="inline-vehiculo-cliente-list" placeholder="Buscar cliente...">
+      <datalist id="inline-vehiculo-cliente-list"></datalist>
     </div>
-    <div class="modal-body">
+    <div class="form-row">
       <div class="form-group">
-        <label>Cliente asociado</label>
-        <input type="text" class="form-control" id="inline-vehiculo-cliente" list="inline-vehiculo-cliente-list" placeholder="Buscar cliente...">
-        <datalist id="inline-vehiculo-cliente-list"></datalist>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Marca *</label>
-          <select class="form-control" id="inline-vehiculo-marca" onchange="onMarcaChange('inline-vehiculo')">
-            <option value="">— Seleccionar marca —</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Modelo *</label>
-          <select class="form-control" id="inline-vehiculo-modelo" onchange="onModeloChange('inline-vehiculo')" disabled>
-            <option value="">— Seleccionar modelo —</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Año</label>
-          <select class="form-control" id="inline-vehiculo-anio" disabled>
-            <option value="">— Año —</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Placa</label>
-          <input class="form-control" id="inline-vehiculo-placa" placeholder="ABC-123">
-        </div>
+        <label>Marca *</label>
+        <select class="form-control" id="inline-vehiculo-marca" onchange="onMarcaChange('inline-vehiculo')">
+          <option value="">— Seleccionar marca —</option>
+        </select>
       </div>
       <div class="form-group">
-        <label>VIN <span style="font-size:11px;color:var(--muted);font-weight:normal">— 17 caracteres · auto-decodifica marca/modelo/año</span></label>
-        <div style="display:flex;gap:8px;align-items:stretch">
-          <input class="form-control" id="inline-vehiculo-vin" placeholder="1HGBH41JXMN109186" maxlength="17"
-            style="text-transform:uppercase;letter-spacing:.08em;font-family:monospace"
-            oninput="onVinInput('inline-vehiculo')">
-          <button type="button" class="btn btn-secondary btn-sm" id="inline-vehiculo-vin-btn"
-            onclick="decodeVin('inline-vehiculo')" style="white-space:nowrap;padding:0 12px">🔍 Decodificar</button>
-        </div>
-        <div id="inline-vehiculo-vin-status" style="font-size:12px;margin-top:5px;min-height:16px"></div>
-      </div>
-      <div class="form-group">
-        <label>Color</label>
-        <input class="form-control" id="inline-vehiculo-color" placeholder="Blanco">
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Número Unidad</label>
-          <input class="form-control" id="inline-vehiculo-num" placeholder="UNI-001">
-        </div>
+        <label>Modelo *</label>
+        <select class="form-control" id="inline-vehiculo-modelo" onchange="onModeloChange('inline-vehiculo')" disabled>
+          <option value="">— Seleccionar modelo —</option>
+        </select>
       </div>
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('modal-vehiculo-inline')">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveInlineVehiculo()">Crear y Usar</button>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Año</label>
+        <select class="form-control" id="inline-vehiculo-anio" disabled>
+          <option value="">— Año —</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Placa</label>
+        <input class="form-control" id="inline-vehiculo-placa" placeholder="ABC-123">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>VIN <span style="font-size:11px;color:var(--muted);font-weight:normal">— 17 caracteres · auto-decodifica marca/modelo/año</span></label>
+      <div style="display:flex;gap:8px;align-items:stretch">
+        <input class="form-control" id="inline-vehiculo-vin" placeholder="1HGBH41JXMN109186" maxlength="17"
+          style="text-transform:uppercase;letter-spacing:.08em;font-family:monospace"
+          oninput="onVinInput('inline-vehiculo')">
+        <button type="button" class="btn btn-secondary btn-sm" id="inline-vehiculo-vin-btn"
+          onclick="decodeVin('inline-vehiculo')" style="white-space:nowrap;padding:0 12px">🔍 Decodificar</button>
+      </div>
+      <div id="inline-vehiculo-vin-status" style="font-size:12px;margin-top:5px;min-height:16px"></div>
+    </div>
+    <div class="form-group">
+      <label>Color</label>
+      <input class="form-control" id="inline-vehiculo-color" placeholder="Blanco">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Número Unidad</label>
+        <input class="form-control" id="inline-vehiculo-num" placeholder="UNI-001">
+      </div>
     </div>
   </div>
-</div>
+  <div class="modal-footer">
+    <button class="btn btn-outline" onclick="closeModal('modal-vehiculo-inline')">Cancelar</button>
+    <button class="btn btn-primary" onclick="saveInlineVehiculo()">Crear y Usar</button>
+  </div>
+</dialog>
 
 <!-- HIDDEN FILE INPUT -->
 <input type="file" id="hidden-file-input" style="display:none" accept=".xlsx,.xls" onchange="handleFileImport()">
@@ -1019,12 +1017,22 @@ const DB = {
       for (let i = 0; i < newData.length; i += BATCH) {
         const chunk = newData.slice(i, i + BATCH);
         sb.from(table).upsert(chunk)
-          .then(({ error }) => { if (error) console.error('[Supabase upsert]', table, i, error.message); });
+          .then(({ error }) => {
+            if (error) {
+              console.error('[Supabase upsert]', table, i, error.message);
+              toast(`⚠️ Error al guardar en ${table}: ${error.message}`, 'danger');
+            }
+          });
       }
     }
     deletedIds.forEach(id => {
       sb.from(table).delete().eq('id', id)
-        .then(({ error }) => { if (error) console.error('[Supabase delete]', table, error.message); });
+        .then(({ error }) => {
+          if (error) {
+            console.error('[Supabase delete]', table, error.message);
+            toast(`⚠️ Error al eliminar en ${table}: ${error.message}`, 'danger');
+          }
+        });
     });
   },
 
@@ -1191,8 +1199,16 @@ function navigate(page) {
 
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('show'); }
 function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('overlay').classList.remove('show'); }
-function openModal(id) { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openModal(id) {
+  const el = document.getElementById(id);
+  if (el.tagName === 'DIALOG') { if (!el.open) el.showModal(); }
+  else el.classList.add('open');
+}
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (el.tagName === 'DIALOG') { if (el.open) el.close(); }
+  else el.classList.remove('open');
+}
 
 function populateDatalist(dataListId, data, displayField, valueField = 'id') {
   const datalist = document.getElementById(dataListId);
@@ -2044,6 +2060,7 @@ function printOrden() {
 }
 
 function openNewOrdenModal() {
+  _inlineContext = 'orden';
   document.getElementById('orden-id').value = '';
   ['orden-descripcion','orden-notas','orden-mano-obra'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('orden-estado').value = 'recibido';
@@ -2459,11 +2476,15 @@ function selectRefaccionFromDatalist(idx) {
 /* ═══════════════════════════════════════════════════════════════ INLINE CLIENTE/VEHICULO */
 let _inlineContext = 'orden'; // 'orden' | 'cotizacion'
 
-function openInlineClienteForm(context = 'orden') {
-  _inlineContext = context;
+function openInlineClienteForm() {
   ['inline-cliente-nombre','inline-cliente-tel','inline-cliente-razon'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('inline-cliente-tipo').value = 'contado';
   openModal('modal-cliente-inline');
+}
+
+function openInlineCotizacionClienteForm() {
+  _inlineContext = 'cotizacion';
+  openInlineClienteForm();
 }
 
 function saveInlineCliente() {
@@ -2492,8 +2513,7 @@ function saveInlineCliente() {
   toast('Cliente creado y seleccionado.');
 }
 
-function openInlineVehiculoForm(context = 'orden') {
-  _inlineContext = context;
+function openInlineVehiculoForm() {
   const clienteId = resolveClienteId(_inlineContext === 'cotizacion' ? 'cotizacion-cliente' : 'orden-cliente') || 'NA';
   populateClienteSelect('inline-vehiculo-cliente', clienteId);
   ['inline-vehiculo-placa','inline-vehiculo-vin','inline-vehiculo-color','inline-vehiculo-num'].forEach(id=>document.getElementById(id).value='');
@@ -2505,6 +2525,11 @@ function openInlineVehiculoForm(context = 'orden') {
   document.getElementById('inline-vehiculo-vin-status').textContent = '';
   document.getElementById('inline-vehiculo-vin').style.borderColor = '';
   openModal('modal-vehiculo-inline');
+}
+
+function openInlineCotizacionVehiculoForm() {
+  _inlineContext = 'cotizacion';
+  openInlineVehiculoForm();
 }
 
 function saveInlineVehiculo() {
@@ -2766,6 +2791,7 @@ function renderCotizaciones() {
 }
 
 function openNewCotizacionModal() {
+  _inlineContext = 'cotizacion';
   document.getElementById('cotizacion-id').value = '';
   ['cotizacion-notas','cotizacion-mano-obra'].forEach(id => document.getElementById(id).value = '');
   _resetNACotizacion();
@@ -2993,6 +3019,7 @@ function saveCotizacion() {
 }
 
 function editCotizacion(id) {
+  _inlineContext = 'cotizacion';
   const c = DB.cotizaciones().find(c => c.id === id);
   if (!c) return;
   _resetNACotizacion();
@@ -3147,7 +3174,6 @@ function viewCotizacion(id) {
 
 /* ═══════════════════════════════════════════════════════════════ REALTIME SYNC */
 function initRealtime() {
-  /* Mapeo tabla → página que la muestra / función de render */
   const TABLE_PAGE = {
     clientes:     'clientes',
     vehiculos:    'vehiculos',
@@ -3156,10 +3182,10 @@ function initRealtime() {
     cotizaciones: 'cotizaciones',
   };
   const RENDER_FN = {
-    clientes:   renderClientes,
-    vehiculos:  renderVehiculos,
-    ordenes:    renderOrdenes,
-    inventario: renderInventario,
+    clientes:     renderClientes,
+    vehiculos:    renderVehiculos,
+    ordenes:      renderOrdenes,
+    inventario:   renderInventario,
     cotizaciones: renderCotizaciones,
   };
 
@@ -3189,7 +3215,6 @@ function initRealtime() {
 
         if (!changed) return;
 
-        /* Re-renderiza la página activa si muestra datos de esta tabla */
         const activePage = document.querySelector('.page.active')?.id?.replace('page-', '');
         if (activePage === targetPage) RENDER_FN[targetPage]?.();
         if (activePage === 'dashboard') renderDashboard();
