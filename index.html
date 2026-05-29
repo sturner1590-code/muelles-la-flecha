@@ -1297,6 +1297,72 @@ function editCliente(id) {
   openModal('modal-cliente');
 }
 
+/* ── Detección de duplicados: acceso defensivo a campos (camelCase y snake_case) ── */
+function _fld(obj, ...keys) {
+  for (const k of keys) {
+    const v = obj[k];
+    if (v !== undefined && v !== null && v !== '') return String(v);
+  }
+  return '';
+}
+function _norm(s) { return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
+
+function _dupCliente(nombre, tel, email, razonSocial, excludeId = '') {
+  const tNorm = tel.replace(/\D/g, '');
+  return DB.clientes().find(c => {
+    if (c.id === excludeId) return false;
+    if (_norm(c.nombre) === _norm(nombre)) return true;
+    const cTel = _fld(c, 'telefono').replace(/\D/g, '');
+    if (tNorm && cTel && cTel === tNorm) return true;
+    const cEmail = _norm(_fld(c, 'email'));
+    if (email && cEmail && cEmail === _norm(email)) return true;
+    const cRazon = _norm(_fld(c, 'razonSocial', 'razon_social', 'razonsocial'));
+    if (razonSocial && cRazon && cRazon === _norm(razonSocial)) return true;
+    return false;
+  }) || null;
+}
+function _alertDupCliente(dup, nombre, tel, email, razonSocial) {
+  const tNorm = tel.replace(/\D/g, '');
+  const m = [];
+  if (_norm(dup.nombre) === _norm(nombre)) m.push('nombre');
+  if (tNorm && _fld(dup, 'telefono').replace(/\D/g, '') === tNorm) m.push('teléfono');
+  if (email && _norm(_fld(dup, 'email')) === _norm(email)) m.push('email');
+  if (razonSocial && _norm(_fld(dup, 'razonSocial', 'razon_social', 'razonsocial')) === _norm(razonSocial)) m.push('razón social');
+  alert(`⚠️ CLIENTE DUPLICADO\n\nYa existe "${dup.nombre}" con el mismo ${m.join(' y ')}.\n\nNo se creó el nuevo cliente.`);
+}
+
+function _dupVehiculo(vin, placa, numeroUnidad, clienteId, excludeId = '') {
+  const todos = DB.vehiculos();
+  if (vin) {
+    const d = todos.find(v => v.id !== excludeId && _fld(v, 'vin').toUpperCase() === vin);
+    if (d) return { dup: d, tipo: 'vin', valor: vin };
+  }
+  if (placa) {
+    const d = todos.find(v => v.id !== excludeId && _fld(v, 'placa').toUpperCase() === placa);
+    if (d) return { dup: d, tipo: 'placa', valor: placa };
+  }
+  if (numeroUnidad && clienteId) {
+    const nu = _norm(numeroUnidad);
+    const d = todos.find(v => {
+      if (v.id === excludeId) return false;
+      const vCid = _fld(v, 'clienteId', 'cliente_id', 'clienteid');
+      return vCid === clienteId && _norm(_fld(v, 'numeroUnidad', 'numero_unidad', 'numerounidad')) === nu;
+    });
+    if (d) return { dup: d, tipo: 'numero_unidad', valor: numeroUnidad };
+  }
+  return null;
+}
+function _alertDupVehiculo(check) {
+  const { dup, tipo, valor } = check;
+  const owner = getClienteName(_fld(dup, 'clienteId', 'cliente_id', 'clienteid'));
+  const msgs = {
+    vin:           `El VIN ${valor} ya está registrado`,
+    placa:         `La placa ${valor} ya está registrada`,
+    numero_unidad: `El número de unidad "${valor}" ya está registrado para este cliente`,
+  };
+  alert(`⚠️ VEHÍCULO DUPLICADO\n\n${msgs[tipo]}: ${dup.marca} ${dup.modelo}${owner ? ' — cliente: ' + owner : ''}.\n\nNo se creó el vehículo.`);
+}
+
 function saveCliente() {
   const nombre = document.getElementById('cliente-nombre').value.trim();
   const tel = document.getElementById('cliente-telefono').value.trim();
@@ -1306,24 +1372,8 @@ function saveCliente() {
   const razonSocial = document.getElementById('cliente-razon-social').value.trim();
 
   if (!id) {
-    const norm = s => s.toLowerCase().replace(/\s+/g,' ').trim();
-    const telNorm = tel.replace(/\D/g,'');
-    const dup = DB.clientes().find(c => {
-      if (norm(c.nombre) === norm(nombre)) return true;
-      if (c.telefono && c.telefono.replace(/\D/g,'') === telNorm) return true;
-      if (email && c.email && norm(c.email) === norm(email)) return true;
-      if (razonSocial && c.razonSocial && norm(c.razonSocial) === norm(razonSocial)) return true;
-      return false;
-    });
-    if (dup) {
-      const motivos = [];
-      if (norm(dup.nombre) === norm(nombre)) motivos.push('nombre');
-      if (dup.telefono && dup.telefono.replace(/\D/g,'') === telNorm) motivos.push('teléfono');
-      if (email && dup.email && norm(dup.email) === norm(email)) motivos.push('email');
-      if (razonSocial && dup.razonSocial && norm(dup.razonSocial) === norm(razonSocial)) motivos.push('razón social');
-      toast(`⚠️ Ya existe el cliente "${dup.nombre}" con el mismo ${motivos.join(' y ')}. No se registró.`, 'danger', 6000);
-      return;
-    }
+    const dup = _dupCliente(nombre, tel, email, razonSocial);
+    if (dup) { _alertDupCliente(dup, nombre, tel, email, razonSocial); return; }
   }
 
   let rows = DB.clientes();
@@ -1833,31 +1883,8 @@ function saveVehiculo() {
   const numeroUnidad = document.getElementById('vehiculo-numero-unidad').value.trim();
 
   if (!id) {
-    const todos = DB.vehiculos();
-
-    if (vin) {
-      const dupVin = todos.find(v => v.id !== id && v.vin && v.vin.toUpperCase() === vin);
-      if (dupVin) {
-        toast(`⚠️ El VIN ${vin} ya está registrado: ${dupVin.marca} ${dupVin.modelo} — cliente: ${getClienteName(dupVin.clienteId)}`, 'danger', 7000);
-        return;
-      }
-    }
-
-    if (placa) {
-      const dupPlaca = todos.find(v => v.id !== id && v.placa && v.placa.toUpperCase() === placa);
-      if (dupPlaca) {
-        toast(`⚠️ La placa ${placa} ya está registrada: ${dupPlaca.marca} ${dupPlaca.modelo} — cliente: ${getClienteName(dupPlaca.clienteId)}`, 'danger', 7000);
-        return;
-      }
-    }
-
-    if (numeroUnidad) {
-      const dupUnidad = todos.find(v => v.id !== id && v.clienteId === clienteId && v.numeroUnidad && v.numeroUnidad.toLowerCase() === numeroUnidad.toLowerCase());
-      if (dupUnidad) {
-        toast(`⚠️ Este cliente ya tiene la unidad "${numeroUnidad}" registrada: ${dupUnidad.marca} ${dupUnidad.modelo}`, 'danger', 7000);
-        return;
-      }
-    }
+    const check = _dupVehiculo(vin, placa, numeroUnidad, clienteId);
+    if (check) { _alertDupVehiculo(check); return; }
   }
 
   let rows = DB.vehiculos();
@@ -2523,10 +2550,14 @@ function saveInlineCliente() {
   const nombre = document.getElementById('inline-cliente-nombre').value.trim();
   const tel = document.getElementById('inline-cliente-tel').value.trim();
   if (!nombre || !tel) { toast('Nombre y teléfono requeridos.','danger'); return; }
+  const razonSocial = document.getElementById('inline-cliente-razon').value.trim();
+
+  const dup = _dupCliente(nombre, tel, '', razonSocial);
+  if (dup) { _alertDupCliente(dup, nombre, tel, '', razonSocial); return; }
 
   const newCliente = {
     id: DB.uid(), nombre, telefono: tel,
-    email: '', razonSocial: document.getElementById('inline-cliente-razon').value.trim(),
+    email: '', razonSocial,
     tipoCliente: document.getElementById('inline-cliente-tipo').value
   };
   let clientes = DB.clientes();
@@ -2565,16 +2596,22 @@ function saveInlineVehiculo() {
   const modelo = document.getElementById('inline-vehiculo-modelo').value.trim();
   if (!marca || !modelo) { toast('Marca y modelo requeridos.','danger'); return; }
 
+  const clienteId = resolveClienteId('inline-vehiculo-cliente');
+  const placa = document.getElementById('inline-vehiculo-placa').value.trim().toUpperCase();
+  const vin = document.getElementById('inline-vehiculo-vin').value.trim().toUpperCase();
+  const numeroUnidad = document.getElementById('inline-vehiculo-num').value.trim();
+
+  const check = _dupVehiculo(vin, placa, numeroUnidad, clienteId);
+  if (check) { _alertDupVehiculo(check); return; }
+
   const newVehiculo = {
     id: DB.uid(),
-    clienteId: resolveClienteId('inline-vehiculo-cliente'),
-    placa: document.getElementById('inline-vehiculo-placa').value.trim().toUpperCase(),
-    vin: document.getElementById('inline-vehiculo-vin').value.trim(),
-    marca, modelo,
+    clienteId,
+    placa, vin, marca, modelo,
     color: document.getElementById('inline-vehiculo-color').value.trim(),
     anio: +document.getElementById('inline-vehiculo-anio').value||null,
     km: 0,
-    numeroUnidad: document.getElementById('inline-vehiculo-num').value.trim()
+    numeroUnidad
   };
   let vehiculos = DB.vehiculos();
   vehiculos.push(newVehiculo);
