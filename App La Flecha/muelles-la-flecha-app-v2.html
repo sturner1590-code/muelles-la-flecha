@@ -186,6 +186,13 @@
     tr.prioridad-urgente:hover td { background: #fee2e2 !important; }
     tr.prioridad-alta td:first-child   { border-left: 4px solid #f59e0b; }
     tr.prioridad-urgente td:first-child { border-left: 4px solid #dc2626; }
+    /* ── PANEL SELECCIÓN VEHÍCULO ── */
+    .vehiculos-panel { border: 1px solid var(--border); border-radius: 8px; margin-top: 4px; max-height: 220px; overflow-y: auto; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,.08); }
+    .vehiculo-opt { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f3f4f6; font-size: 13px; }
+    .vehiculo-opt:last-child { border-bottom: none; }
+    .vehiculo-opt:hover { background: #f0fdf4; }
+    .vehiculo-opt-title { font-weight: 600; color: #111827; }
+    .vtag { font-size: 11px; background: #f3f4f6; border-radius: 4px; padding: 1px 7px; color: #4b5563; white-space: nowrap; }
     /* ── IMPRESIÓN ── */
     @media print {
       @page { margin: 10mm; }
@@ -552,8 +559,8 @@
           <label>Vehiculo</label>
           <div style="display:flex;gap:6px">
             <div style="flex:1">
-              <input type="text" class="form-control" id="orden-vehiculo" list="orden-vehiculo-list" onchange="selectVehiculoFromDatalist()" placeholder="Buscar vehículo...">
-              <datalist id="orden-vehiculo-list"></datalist>
+              <input type="text" class="form-control" id="orden-vehiculo" oninput="filtrarVehiculosPanel('orden')" onfocus="mostrarVehiculosPanel('orden')" onblur="_blurVehiculosPanel('orden')" placeholder="Marca, placa, n° unidad o últimos 4 del VIN...">
+              <div id="orden-vehiculos-panel" class="vehiculos-panel" style="display:none"></div>
             </div>
             <button class="btn btn-primary btn-sm" onclick="openInlineVehiculoForm()">+ Nuevo</button>
             <button class="btn btn-outline btn-sm" id="btn-na-vehiculo" onclick="toggleNAVehiculo()" title="Marcar como Sin vehículo">N/A</button>
@@ -670,8 +677,8 @@
           <label>Vehiculo</label>
           <div style="display:flex;gap:6px">
             <div style="flex:1">
-              <input type="text" class="form-control" id="cotizacion-vehiculo" list="cotizacion-vehiculo-list" onchange="selectCotizacionVehiculoFromDatalist()" placeholder="Buscar vehículo...">
-              <datalist id="cotizacion-vehiculo-list"></datalist>
+              <input type="text" class="form-control" id="cotizacion-vehiculo" oninput="filtrarVehiculosPanel('cotizacion')" onfocus="mostrarVehiculosPanel('cotizacion')" onblur="_blurVehiculosPanel('cotizacion')" placeholder="Marca, placa, n° unidad o últimos 4 del VIN...">
+              <div id="cotizacion-vehiculos-panel" class="vehiculos-panel" style="display:none"></div>
             </div>
             <button class="btn btn-primary btn-sm" onclick="openInlineCotizacionVehiculoForm()">+ Nuevo</button>
             <button class="btn btn-outline btn-sm" id="btn-na-cotizacion-vehiculo" onclick="toggleNACotizacionVehiculo()" title="Marcar como Sin vehículo">N/A</button>
@@ -2159,10 +2166,12 @@ function _resetNAOrden() {
   const vInp = document.getElementById('orden-vehiculo');
   const cBtn = document.getElementById('btn-na-cliente');
   const vBtn = document.getElementById('btn-na-vehiculo');
+  const panel = document.getElementById('orden-vehiculos-panel');
   cInp.disabled = false; cInp.dataset.clienteId = '';
   vInp.disabled = false; vInp.dataset.vehiculoId = '';
   if (cBtn) { cBtn.textContent = 'N/A'; cBtn.className = 'btn btn-outline btn-sm'; }
   if (vBtn) { vBtn.textContent = 'N/A'; vBtn.className = 'btn btn-outline btn-sm'; }
+  if (panel) panel.style.display = 'none';
 }
 
 function toggleNACliente() {
@@ -2176,13 +2185,9 @@ function toggleNACliente() {
   } else {
     inp.disabled = true; inp.value = 'Sin cliente'; inp.dataset.clienteId = 'NA';
     btn.textContent = '✕ Quitar'; btn.className = 'btn btn-secondary btn-sm';
-    // Mostrar todos los vehículos en el datalist cuando no hay cliente
-    const datalist = document.getElementById('orden-vehiculo-list');
     const vehInp = document.getElementById('orden-vehiculo');
-    datalist.innerHTML = DB.vehiculos().map(v => `<option value="${vehiculoDisplayText(v)}"></option>`).join('');
-    vehInp.disabled = false;
-    vehInp.value = '';
-    vehInp.dataset.vehiculoId = '';
+    vehInp.disabled = false; vehInp.value = ''; vehInp.dataset.vehiculoId = '';
+    _renderVehiculosPanel('orden', DB.vehiculos(), '');
   }
 }
 
@@ -2192,7 +2197,10 @@ function toggleNAVehiculo() {
   if (inp.dataset.vehiculoId === 'NA') {
     inp.disabled = false; inp.value = ''; inp.dataset.vehiculoId = '';
     btn.textContent = 'N/A'; btn.className = 'btn btn-outline btn-sm';
+    mostrarVehiculosPanel('orden');
   } else {
+    const panel = document.getElementById('orden-vehiculos-panel');
+    if (panel) panel.style.display = 'none';
     _setNAVehiculo();
   }
 }
@@ -2230,54 +2238,112 @@ function vehiculoDisplayText(v) {
   if (!v) return '';
   let txt = `${v.marca} ${v.modelo}`;
   if (v.anio) txt += ` ${v.anio}`;
-  if (v.placa) txt += ` — ${v.placa}`;
+  if (v.placa) txt += ` · ${v.placa}`;
+  if (v.vin)   txt += ` · ···${String(v.vin).slice(-4)}`;
+  if (v.numeroUnidad) txt += ` · ${v.numeroUnidad}`;
   return txt;
 }
 
-function selectVehiculoFromDatalist() {
-  const input = document.getElementById('orden-vehiculo');
-  const currentValue = input.value.trim();
-  const vehiculos = DB.vehiculos();
-
-  const vehiculo = vehiculos.find(v => {
-    const dt = vehiculoDisplayText(v);
-    return dt.toLowerCase() === currentValue.toLowerCase() || v.id === currentValue;
-  });
-
-  if (vehiculo) {
-    input.value = vehiculoDisplayText(vehiculo);
-    input.dataset.vehiculoId = vehiculo.id;
-  }
+/* ── Panel de selección de vehículo ── */
+function _vehiculoMatchesSearch(v, q) {
+  if (!q) return true;
+  const ql = q.toLowerCase();
+  const vin4 = String(v.vin || '').slice(-4).toLowerCase();
+  return vehiculoDisplayText(v).toLowerCase().includes(ql)
+      || String(v.placa || '').toLowerCase().includes(ql)
+      || String(v.numeroUnidad || '').toLowerCase().includes(ql)
+      || (vin4 && vin4.includes(ql));
 }
+
+function _renderVehiculosPanel(context, vehs, q) {
+  const panel = document.getElementById(context + '-vehiculos-panel');
+  if (!panel) return;
+  const filtered = vehs.filter(v => _vehiculoMatchesSearch(v, q));
+  if (!vehs.length) {
+    panel.innerHTML = `<div style="padding:10px;color:#6b7280;font-size:13px;text-align:center">Sin vehículos registrados para este cliente</div>`;
+  } else if (!filtered.length) {
+    panel.innerHTML = `<div style="padding:10px;color:#6b7280;font-size:13px;text-align:center">Sin coincidencias — intenta con placa, unidad o últimos 4 del VIN</div>`;
+  } else {
+    panel.innerHTML = filtered.map(v => {
+      const vin4 = v.vin ? String(v.vin).slice(-4) : '';
+      const tags = [
+        v.placa        ? `<span class="vtag">🔖 ${v.placa}</span>`       : '',
+        vin4           ? `<span class="vtag">VIN ···${vin4}</span>`       : '',
+        v.numeroUnidad ? `<span class="vtag">📦 ${v.numeroUnidad}</span>` : '',
+      ].filter(Boolean).join('');
+      return `<div class="vehiculo-opt" onmousedown="selectVehiculoCard('${context}','${v.id}')">
+        <div class="vehiculo-opt-title">${v.marca} ${v.modelo}${v.anio ? ' ' + v.anio : ''}</div>
+        ${tags ? `<div style="display:flex;gap:4px;margin-top:3px;flex-wrap:wrap">${tags}</div>` : ''}
+      </div>`;
+    }).join('');
+  }
+  panel.style.display = 'block';
+}
+
+function _getVehiculosDeCliente(context) {
+  const clienteInp = document.getElementById(context + '-cliente');
+  if (!clienteInp) return null;
+  const clienteId = clienteInp.dataset.clienteId;
+  if (clienteId === 'NA') return DB.vehiculos();
+  if (!clienteId) {
+    const c = DB.clientes().find(c => c.nombre === clienteInp.value);
+    if (!c) return null;
+    return DB.vehiculos().filter(v => _fld(v, 'clienteId', 'cliente_id', 'clienteid') === c.id);
+  }
+  return DB.vehiculos().filter(v => _fld(v, 'clienteId', 'cliente_id', 'clienteid') === clienteId);
+}
+
+function mostrarVehiculosPanel(context) {
+  const inp = document.getElementById(context + '-vehiculo');
+  if (inp && inp.dataset.vehiculoId) return;
+  const vehs = _getVehiculosDeCliente(context);
+  if (!vehs) return;
+  _renderVehiculosPanel(context, vehs, inp?.value.trim() || '');
+}
+
+function filtrarVehiculosPanel(context) {
+  const inp = document.getElementById(context + '-vehiculo');
+  inp.dataset.vehiculoId = '';
+  const vehs = _getVehiculosDeCliente(context);
+  if (!vehs) return;
+  _renderVehiculosPanel(context, vehs, inp.value.trim());
+}
+
+function _blurVehiculosPanel(context) {
+  setTimeout(() => {
+    const panel = document.getElementById(context + '-vehiculos-panel');
+    if (panel) panel.style.display = 'none';
+  }, 200);
+}
+
+function selectVehiculoCard(context, vehiculoId) {
+  const v = DB.vehiculos().find(v => v.id === vehiculoId);
+  if (!v) return;
+  const inp = document.getElementById(context + '-vehiculo');
+  inp.value = vehiculoDisplayText(v);
+  inp.dataset.vehiculoId = vehiculoId;
+  const panel = document.getElementById(context + '-vehiculos-panel');
+  if (panel) panel.style.display = 'none';
+}
+
+function selectVehiculoFromDatalist() {} // reemplazado por panel
 
 function loadVehiculosCliente() {
   const clienteIdInput = document.getElementById('orden-cliente');
-  // El value del input será el nombre (lo que escribe el usuario) o el ID (si seleccionó del datalist)
-  // Intentar obtener el ID del atributo data o del dataset
   let clienteId = clienteIdInput.dataset.clienteId || clienteIdInput.value;
-
-  // Si no está en dataset, buscar por nombre
   if (!clienteId || clienteId === clienteIdInput.value) {
-    const cliente = DB.clientes().find(c => c.nombre === clienteIdInput.value || c.id === clienteIdInput.value);
-    clienteId = cliente ? cliente.id : '';
+    const c = DB.clientes().find(c => c.nombre === clienteIdInput.value || c.id === clienteIdInput.value);
+    clienteId = c ? c.id : '';
   }
-
-  const datalist = document.getElementById('orden-vehiculo-list');
+  const panel = document.getElementById('orden-vehiculos-panel');
   const input = document.getElementById('orden-vehiculo');
-
+  input.value = ''; input.dataset.vehiculoId = '';
   if (!clienteId || clienteId === 'NA') {
-    datalist.innerHTML = '';
-    if (clienteId !== 'NA') { input.value = ''; input.dataset.vehiculoId = ''; }
+    if (panel) panel.style.display = 'none';
     return;
   }
-
-  const vehs = DB.vehiculos().filter(v => v.clienteId === clienteId);
-  datalist.innerHTML = vehs.length
-    ? vehs.map(v => `<option value="${vehiculoDisplayText(v)}"></option>`).join('')
-    : '';
-
-  input.value = '';
-  input.dataset.vehiculoId = '';
+  const vehs = DB.vehiculos().filter(v => _fld(v, 'clienteId', 'cliente_id', 'clienteid') === clienteId);
+  _renderVehiculosPanel('orden', vehs, '');
 }
 
 function editOrden(id) {
@@ -2308,8 +2374,10 @@ function editOrden(id) {
       setTimeout(()=>{
         const v = DB.vehiculos().find(v => v.id === o.vehiculoId);
         const inp = document.getElementById('orden-vehiculo');
+        const panel = document.getElementById('orden-vehiculos-panel');
         if (v) { inp.value = vehiculoDisplayText(v); inp.dataset.vehiculoId = v.id; }
         else   { inp.value = ''; inp.dataset.vehiculoId = ''; }
+        if (panel) panel.style.display = 'none';
       }, 0);
     }, 0);
   }
@@ -2647,11 +2715,15 @@ function saveInlineVehiculo() {
     const inp = document.getElementById('cotizacion-vehiculo');
     inp.value = vehiculoDisplayText(newVehiculo);
     inp.dataset.vehiculoId = newVehiculo.id;
+    const panel = document.getElementById('cotizacion-vehiculos-panel');
+    if (panel) panel.style.display = 'none';
   } else {
     loadVehiculosCliente();
     const inp = document.getElementById('orden-vehiculo');
     inp.value = vehiculoDisplayText(newVehiculo);
     inp.dataset.vehiculoId = newVehiculo.id;
+    const panel = document.getElementById('orden-vehiculos-panel');
+    if (panel) panel.style.display = 'none';
   }
 
   closeModal('modal-vehiculo-inline');
@@ -2898,10 +2970,12 @@ function _resetNACotizacion() {
   const vInp = document.getElementById('cotizacion-vehiculo');
   const cBtn = document.getElementById('btn-na-cotizacion-cliente');
   const vBtn = document.getElementById('btn-na-cotizacion-vehiculo');
+  const panel = document.getElementById('cotizacion-vehiculos-panel');
   cInp.disabled = false; cInp.dataset.clienteId = '';
   vInp.disabled = false; vInp.dataset.vehiculoId = '';
   if (cBtn) { cBtn.textContent = 'N/A'; cBtn.className = 'btn btn-outline btn-sm'; }
   if (vBtn) { vBtn.textContent = 'N/A'; vBtn.className = 'btn btn-outline btn-sm'; }
+  if (panel) panel.style.display = 'none';
 }
 
 function toggleNACotizacionCliente() {
@@ -2914,10 +2988,9 @@ function toggleNACotizacionCliente() {
   } else {
     inp.disabled = true; inp.value = 'Sin cliente'; inp.dataset.clienteId = 'NA';
     btn.textContent = '✕ Quitar'; btn.className = 'btn btn-secondary btn-sm';
-    const datalist = document.getElementById('cotizacion-vehiculo-list');
-    const vehInp  = document.getElementById('cotizacion-vehiculo');
-    datalist.innerHTML = DB.vehiculos().map(v => `<option value="${vehiculoDisplayText(v)}"></option>`).join('');
+    const vehInp = document.getElementById('cotizacion-vehiculo');
     vehInp.disabled = false; vehInp.value = ''; vehInp.dataset.vehiculoId = '';
+    _renderVehiculosPanel('cotizacion', DB.vehiculos(), '');
   }
 }
 
@@ -2948,12 +3021,7 @@ function selectCotizacionClienteFromDatalist() {
   loadVehiculosCotizacionCliente();
 }
 
-function selectCotizacionVehiculoFromDatalist() {
-  const input = document.getElementById('cotizacion-vehiculo');
-  const val   = input.value.trim();
-  const v = DB.vehiculos().find(v => vehiculoDisplayText(v).toLowerCase() === val.toLowerCase() || v.id === val);
-  if (v) { input.value = vehiculoDisplayText(v); input.dataset.vehiculoId = v.id; }
-}
+function selectCotizacionVehiculoFromDatalist() {} // reemplazado por panel
 
 function loadVehiculosCotizacionCliente() {
   const clienteInp = document.getElementById('cotizacion-cliente');
@@ -2962,16 +3030,15 @@ function loadVehiculosCotizacionCliente() {
     const c = DB.clientes().find(c => c.nombre === clienteInp.value || c.id === clienteInp.value);
     clienteId = c ? c.id : '';
   }
-  const datalist = document.getElementById('cotizacion-vehiculo-list');
-  const input    = document.getElementById('cotizacion-vehiculo');
+  const panel = document.getElementById('cotizacion-vehiculos-panel');
+  const input = document.getElementById('cotizacion-vehiculo');
+  input.value = ''; input.dataset.vehiculoId = '';
   if (!clienteId || clienteId === 'NA') {
-    datalist.innerHTML = '';
-    if (clienteId !== 'NA') { input.value = ''; input.dataset.vehiculoId = ''; }
+    if (panel) panel.style.display = 'none';
     return;
   }
-  const vehs = DB.vehiculos().filter(v => v.clienteId === clienteId);
-  datalist.innerHTML = vehs.map(v => `<option value="${vehiculoDisplayText(v)}"></option>`).join('');
-  input.value = ''; input.dataset.vehiculoId = '';
+  const vehs = DB.vehiculos().filter(v => _fld(v, 'clienteId', 'cliente_id', 'clienteid') === clienteId);
+  _renderVehiculosPanel('cotizacion', vehs, '');
 }
 
 function addCotizacionRefaccionLine() {
@@ -3134,8 +3201,10 @@ function editCotizacion(id) {
       setTimeout(() => {
         const v = DB.vehiculos().find(v => v.id === c.vehiculoId);
         const inp = document.getElementById('cotizacion-vehiculo');
+        const panel = document.getElementById('cotizacion-vehiculos-panel');
         if (v) { inp.value = vehiculoDisplayText(v); inp.dataset.vehiculoId = v.id; }
         else   { inp.value = ''; inp.dataset.vehiculoId = ''; }
+        if (panel) panel.style.display = 'none';
       }, 0);
     }, 0);
   }
