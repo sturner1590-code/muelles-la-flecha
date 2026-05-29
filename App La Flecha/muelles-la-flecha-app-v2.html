@@ -1222,12 +1222,12 @@ document.querySelectorAll('.modal-backdrop').forEach(m => {
   m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
 });
 
-function toast(msg, type = 'success') {
+function toast(msg, type = 'success', duration = 3200) {
   const t = document.createElement('div');
   t.className = `toast toast-${type}`;
   t.textContent = msg;
   document.getElementById('toasts').appendChild(t);
-  setTimeout(() => t.remove(), 3200);
+  setTimeout(() => t.remove(), duration);
 }
 
 function badge(data, val) {
@@ -1318,11 +1318,34 @@ function saveCliente() {
   const tel = document.getElementById('cliente-telefono').value.trim();
   if (!nombre || !tel) { toast('Nombre y telefono requeridos.','danger'); return; }
   const id = document.getElementById('cliente-id').value;
+  const email = document.getElementById('cliente-email').value.trim();
+  const razonSocial = document.getElementById('cliente-razon-social').value.trim();
+
+  if (!id) {
+    const norm = s => s.toLowerCase().replace(/\s+/g,' ').trim();
+    const telNorm = tel.replace(/\D/g,'');
+    const dup = DB.clientes().find(c => {
+      if (norm(c.nombre) === norm(nombre)) return true;
+      if (c.telefono && c.telefono.replace(/\D/g,'') === telNorm) return true;
+      if (email && c.email && norm(c.email) === norm(email)) return true;
+      if (razonSocial && c.razonSocial && norm(c.razonSocial) === norm(razonSocial)) return true;
+      return false;
+    });
+    if (dup) {
+      const motivos = [];
+      if (norm(dup.nombre) === norm(nombre)) motivos.push('nombre');
+      if (dup.telefono && dup.telefono.replace(/\D/g,'') === telNorm) motivos.push('teléfono');
+      if (email && dup.email && norm(dup.email) === norm(email)) motivos.push('email');
+      if (razonSocial && dup.razonSocial && norm(dup.razonSocial) === norm(razonSocial)) motivos.push('razón social');
+      toast(`⚠️ Ya existe el cliente "${dup.nombre}" con el mismo ${motivos.join(' y ')}. No se registró.`, 'danger', 6000);
+      return;
+    }
+  }
+
   let rows = DB.clientes();
   const obj = {
     id: id || DB.uid(), nombre, telefono: tel,
-    email: document.getElementById('cliente-email').value.trim(),
-    razonSocial: document.getElementById('cliente-razon-social').value.trim(),
+    email, razonSocial,
     tipoCliente: document.getElementById('cliente-tipo').value
   };
   if (id) rows = rows.map(c => c.id===id ? obj : c);
@@ -1821,16 +1844,46 @@ function saveVehiculo() {
   const modelo = document.getElementById('vehiculo-modelo').value.trim();
   if (!clienteId || !marca || !modelo) { toast('Cliente, marca y modelo requeridos.','danger'); return; }
   const id = document.getElementById('vehiculo-id').value;
+  const placa = document.getElementById('vehiculo-placa').value.trim().toUpperCase();
+  const vin = document.getElementById('vehiculo-vin').value.trim().toUpperCase();
+  const numeroUnidad = document.getElementById('vehiculo-numero-unidad').value.trim();
+
+  if (!id) {
+    const todos = DB.vehiculos();
+
+    if (vin) {
+      const dupVin = todos.find(v => v.id !== id && v.vin && v.vin.toUpperCase() === vin);
+      if (dupVin) {
+        toast(`⚠️ El VIN ${vin} ya está registrado: ${dupVin.marca} ${dupVin.modelo} — cliente: ${getClienteName(dupVin.clienteId)}`, 'danger', 7000);
+        return;
+      }
+    }
+
+    if (placa) {
+      const dupPlaca = todos.find(v => v.id !== id && v.placa && v.placa.toUpperCase() === placa);
+      if (dupPlaca) {
+        toast(`⚠️ La placa ${placa} ya está registrada: ${dupPlaca.marca} ${dupPlaca.modelo} — cliente: ${getClienteName(dupPlaca.clienteId)}`, 'danger', 7000);
+        return;
+      }
+    }
+
+    if (numeroUnidad) {
+      const dupUnidad = todos.find(v => v.id !== id && v.clienteId === clienteId && v.numeroUnidad && v.numeroUnidad.toLowerCase() === numeroUnidad.toLowerCase());
+      if (dupUnidad) {
+        toast(`⚠️ Este cliente ya tiene la unidad "${numeroUnidad}" registrada: ${dupUnidad.marca} ${dupUnidad.modelo}`, 'danger', 7000);
+        return;
+      }
+    }
+  }
+
   let rows = DB.vehiculos();
   const obj = {
     id: id||DB.uid(), clienteId,
-    placa: document.getElementById('vehiculo-placa').value.trim().toUpperCase(),
-    vin: document.getElementById('vehiculo-vin').value.trim(),
-    marca, modelo,
+    placa, vin, marca, modelo,
     color: document.getElementById('vehiculo-color').value.trim(),
     anio: +document.getElementById('vehiculo-anio').value||null,
     km: +document.getElementById('vehiculo-km').value||0,
-    numeroUnidad: document.getElementById('vehiculo-numero-unidad').value.trim()
+    numeroUnidad
   };
   if (id) rows = rows.map(v=>v.id===id?obj:v);
   else rows.push(obj);
