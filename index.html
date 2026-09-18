@@ -237,6 +237,9 @@
     <div class="nav-item" data-page="ordenes" onclick="navigate('ordenes')">
       <span class="nav-icon">📋</span> Ordenes
     </div>
+    <div class="nav-item" data-page="por-cobrar" onclick="navigate('por-cobrar')">
+      <span class="nav-icon">💵</span> Por Cobrar
+    </div>
     <div class="nav-item" data-page="cotizaciones" onclick="navigate('cotizaciones')">
       <span class="nav-icon">💰</span> Cotizaciones
     </div>
@@ -323,6 +326,21 @@
       <div class="table-wrap">
         <table><thead><tr><th>#</th><th>Vehiculo</th><th class="hide-mobile">Cliente</th><th>Estado</th><th class="hide-mobile">Prioridad</th><th class="hide-mobile">Material</th><th class="hide-mobile">M.O.</th><th>Total</th><th class="hide-mobile">Fecha Creación</th><th>Acciones</th></tr></thead>
           <tbody id="tbody-ordenes"></tbody></table>
+      </div>
+    </section>
+
+    <!-- POR COBRAR -->
+    <section class="page" id="page-por-cobrar">
+      <div class="section-header">
+        <h3>💵 Por Cobrar</h3>
+        <div class="btn-group">
+          <input type="text" class="search-bar" placeholder="Buscar cliente o vehículo..." id="search-por-cobrar" oninput="renderPorCobrar()">
+        </div>
+      </div>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:12px">Órdenes completadas marcadas como "Pendiente de pago" o "Pendiente de facturar".</p>
+      <div class="table-wrap">
+        <table><thead><tr><th>#</th><th>Vehiculo</th><th class="hide-mobile">Cliente</th><th>Pendiente</th><th class="hide-mobile">Completada</th><th>Total</th><th style="text-align:right">Acciones</th></tr></thead>
+          <tbody id="tbody-por-cobrar"></tbody></table>
       </div>
     </section>
 
@@ -618,6 +636,21 @@
           <option value="alta">Alta</option>
           <option value="urgente">Urgente</option>
         </select>
+      </div>
+
+      <div class="form-row" style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;margin-bottom:12px">
+        <div class="form-group" style="margin-bottom:0">
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-weight:normal">
+            <input type="checkbox" id="orden-pendiente-pago" style="width:16px;height:16px;flex-shrink:0">
+            💵 Pendiente de pago
+          </label>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-weight:normal">
+            <input type="checkbox" id="orden-pendiente-facturar" style="width:16px;height:16px;flex-shrink:0">
+            🧾 Pendiente de facturar
+          </label>
+        </div>
       </div>
 
       <div class="form-group">
@@ -1182,7 +1215,7 @@ let currentOrdenLineas = [];
 let ordenRefaccionesMap = {};
 
 /* ═══════════════════════════════════════════════════════════════ UI HELPERS */
-const PAGE_TITLES = { dashboard: '📊 Dashboard', clientes: '👥 Clientes', vehiculos: '🚗 Vehiculos', ordenes: '📋 Ordenes', cotizaciones: '💰 Cotizaciones', inventario: '📦 Inventario', reportes: '📈 Reportes', exportar: '📄 Exportar' };
+const PAGE_TITLES = { dashboard: '📊 Dashboard', clientes: '👥 Clientes', vehiculos: '🚗 Vehiculos', ordenes: '📋 Ordenes', 'por-cobrar': '💵 Por Cobrar', cotizaciones: '💰 Cotizaciones', inventario: '📦 Inventario', reportes: '📈 Reportes', exportar: '📄 Exportar' };
 const STATUS_LABELS   = { recibido: ['badge-gray', 'Recibido'], en_proceso: ['badge-red', 'En Proceso'], completado: ['badge-green', 'Completado'] };
 const PRIORITY_LABELS = { normal: ['badge-gray', 'Normal'], alta: ['badge-yellow', '⚡ Alta'], urgente: ['badge-red', '🔴 Urgente'] };
 
@@ -1195,7 +1228,7 @@ function navigate(page) {
   closeSidebar();
   const renderers = {
     dashboard: renderDashboard, clientes: renderClientes, vehiculos: renderVehiculos,
-    ordenes: renderOrdenes, cotizaciones: renderCotizaciones, inventario: renderInventario, reportes: renderReportes
+    ordenes: renderOrdenes, 'por-cobrar': renderPorCobrar, cotizaciones: renderCotizaciones, inventario: renderInventario, reportes: renderReportes
   };
   if (renderers[page]) renderers[page]();
 }
@@ -1999,6 +2032,82 @@ function renderOrdenes() {
     : `<tr><td colspan="10" class="empty-state">Sin ordenes</td></tr>`;
 }
 
+/* ═══════════════════════════════════════════════════════════════ POR COBRAR */
+function renderPorCobrar() {
+  const q = (document.getElementById('search-por-cobrar')?.value || '').toLowerCase();
+  let rows = DB.ordenes().filter(o => o.estado === 'completado' && (o.pendientePago || o.pendienteFacturar));
+  if (q) rows = rows.filter(o =>
+    getClienteName(o.clienteId).toLowerCase().includes(q) ||
+    getVehiculoLabel(o.vehiculoId).toLowerCase().includes(q)
+  );
+  rows = [...rows].sort((a, b) => (b.completadoEn || b.creadoEn || '').localeCompare(a.completadoEn || a.creadoEn || ''));
+
+  document.getElementById('tbody-por-cobrar').innerHTML = rows.length
+    ? rows.map(o => {
+        const totalMat = +o.totalMaterial || 0;
+        const totalMano = +o.manoObra || 0;
+        const total = totalMat + totalMano;
+        const folioNum = o.id.slice(-4).toUpperCase();
+        const pendTags = [
+          o.pendientePago     ? `<span class="badge badge-yellow">💵 Pago</span>`    : '',
+          o.pendienteFacturar ? `<span class="badge badge-purple">🧾 Factura</span>` : '',
+        ].filter(Boolean).join(' ');
+        const cliente = DB.clientes().find(c => c.id === o.clienteId);
+        const tieneTel = !!(cliente && cliente.telefono);
+        return `<tr>
+          <td><strong>#${folioNum}</strong></td>
+          <td style="cursor:pointer" onclick="viewOrden('${o.id}')">${getVehiculoLabel(o.vehiculoId)}</td>
+          <td class="hide-mobile">${getClienteName(o.clienteId)}</td>
+          <td>${pendTags}</td>
+          <td class="hide-mobile" style="font-size:12px;white-space:nowrap">${fmtDateTime(o.completadoEn) || '—'}</td>
+          <td><strong>${fmt(total)}</strong></td>
+          <td style="text-align:right">
+            <button class="btn btn-primary btn-sm" ${tieneTel ? '' : 'disabled'} title="${tieneTel ? 'Enviar WhatsApp al cliente' : 'Este cliente no tiene teléfono registrado'}" onclick="sendRecordatorioPago('${o.id}')">📲 Enviar recordatorio de pago</button>
+          </td>
+        </tr>`;
+      }).join('')
+    : `<tr><td colspan="7" class="empty-state">No hay órdenes pendientes de cobro 🎉</td></tr>`;
+}
+
+/* Normaliza teléfono a formato wa.me: agrega código de país 52 (México) si son 10 dígitos locales */
+function _waPhone(tel) {
+  let digits = String(tel || '').replace(/\D/g, '');
+  if (digits.length === 10) digits = '52' + digits;
+  return digits;
+}
+
+function sendRecordatorioPago(id) {
+  const o = DB.ordenes().find(o => o.id === id);
+  if (!o) return;
+  const cliente = DB.clientes().find(c => c.id === o.clienteId);
+  if (!cliente || !cliente.telefono) { toast('Este cliente no tiene teléfono registrado.', 'danger'); return; }
+
+  const veh = DB.vehiculos().find(v => v.id === o.vehiculoId);
+  const totalMat = +o.totalMaterial || 0;
+  const totalMano = +o.manoObra || 0;
+  const total = totalMat + totalMano;
+  const folioNum = o.id.slice(-4).toUpperCase();
+
+  const pendientes = [];
+  if (o.pendientePago) pendientes.push('el pago');
+  if (o.pendienteFacturar) pendientes.push('la factura');
+  const pendienteTxt = pendientes.length ? pendientes.join(' y ') : 'este movimiento';
+
+  let msg = `Hola ${cliente.nombre}, le saluda Muelles y Mofles La Flecha.\n\n`;
+  msg += `Le recordamos que la orden de trabajo #${folioNum}`;
+  if (veh) {
+    const vTxt = [veh.marca, veh.modelo, veh.anio].filter(Boolean).join(' ');
+    msg += ` de su vehículo ${vTxt}${veh.placa ? ' (placa ' + veh.placa + ')' : ''}`;
+  }
+  msg += ` ya fue completada y está pendiente ${pendienteTxt}.\n\n`;
+  if (o.descripcion) msg += `Servicio: ${o.descripcion}\n`;
+  msg += `Total: ${fmt(total)}\n\n`;
+  msg += `Quedamos a sus órdenes para coordinar ${pendienteTxt}. ¡Gracias por su preferencia!`;
+
+  const phone = _waPhone(cliente.telefono);
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
 let _printOrdenId = null;
 
 function viewOrden(id) {
@@ -2103,6 +2212,8 @@ function viewOrden(id) {
         <span><span style="color:#6b7280">📅 Creada:</span> <strong>${fmtDateTime(o.creadoEn)||'—'}</strong></span>
         ${o.iniciadoEn ? `<span style="color:#d1d5db">·</span><span><span style="color:#6b7280">⚙️ Iniciada:</span> <strong>${fmtDateTime(o.iniciadoEn)}</strong></span>` : ''}
         ${o.completadoEn ? `<span style="color:#d1d5db">·</span><span><span style="color:#6b7280">✅ Completada:</span> <strong>${fmtDateTime(o.completadoEn)}</strong></span>` : ''}
+        ${o.pendientePago ? `<span style="color:#d1d5db">·</span><span class="badge badge-yellow">💵 Pendiente de pago</span>` : ''}
+        ${o.pendienteFacturar ? `<span style="color:#d1d5db">·</span><span class="badge badge-purple">🧾 Pendiente de facturar</span>` : ''}
       </div>
 
       <!-- ══ CLIENTE + VEHÍCULO (2 tarjetas coloreadas) ══ -->
@@ -2178,6 +2289,8 @@ function openNewOrdenModal() {
   ['orden-descripcion','orden-notas','orden-mano-obra'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('orden-estado').value = 'recibido';
   document.getElementById('orden-prioridad').value = 'normal';
+  document.getElementById('orden-pendiente-pago').checked = false;
+  document.getElementById('orden-pendiente-facturar').checked = false;
   _resetNAOrden();
   populateClienteSelect('orden-cliente','');
   loadVehiculosCliente();
@@ -2382,6 +2495,8 @@ function editOrden(id) {
   document.getElementById('orden-mano-obra').value = o.manoObra||'';
   document.getElementById('orden-estado').value = o.estado;
   document.getElementById('orden-prioridad').value = o.prioridad;
+  document.getElementById('orden-pendiente-pago').checked = !!o.pendientePago;
+  document.getElementById('orden-pendiente-facturar').checked = !!o.pendienteFacturar;
 
   if (o.clienteId === 'NA') {
     const cInp = document.getElementById('orden-cliente');
@@ -2441,6 +2556,8 @@ function saveOrden() {
     lineas: currentOrdenLineas,
     totalMaterial: totalMat,
     notas: document.getElementById('orden-notas').value.trim(),
+    pendientePago: document.getElementById('orden-pendiente-pago').checked,
+    pendienteFacturar: document.getElementById('orden-pendiente-facturar').checked,
     creadoEn, iniciadoEn, completadoEn
   };
   if (id) rows = rows.map(o=>o.id===id?obj:o);
@@ -3402,6 +3519,7 @@ function initRealtime() {
 
         const activePage = document.querySelector('.page.active')?.id?.replace('page-', '');
         if (activePage === targetPage) RENDER_FN[targetPage]?.();
+        if (table === 'ordenes' && activePage === 'por-cobrar') renderPorCobrar();
         if (activePage === 'dashboard') renderDashboard();
       })
       .subscribe();
