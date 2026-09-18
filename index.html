@@ -22,6 +22,7 @@
   </script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
@@ -194,6 +195,9 @@
       .form-row { grid-template-columns: 1fr; }
       .search-bar { width: 100%; }
       .stat-grid { grid-template-columns: 1fr 1fr; }
+      .dash-row-2col { grid-template-columns: 1fr !important; }
+      .cal-grid, .cal-dow { gap: 4px; }
+      .cal-cell { border-radius: 7px; }
       .modal { max-width: 96vw; max-height: 94vh; }
       .modal-body { padding: 14px; }
       .modal-footer { padding: 12px 14px; }
@@ -241,6 +245,36 @@
     .vehiculo-opt:hover { background: var(--primary-soft); }
     .vehiculo-opt-title { font-weight: 600; color: var(--text); }
     .vtag { font-size: 11px; background: #f3f4f6; border-radius: var(--radius-pill); padding: 2px 9px; color: #4b5563; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
+    /* ── Widgets de analitica en Dashboard ── */
+    .segmented { display: inline-flex; background: #eef0f7; border-radius: var(--radius-pill); padding: 3px; gap: 2px; flex-shrink: 0; }
+    .seg-btn { border: none; background: transparent; padding: 5px 13px; border-radius: var(--radius-pill); font-size: 12px; font-weight: 600; color: var(--muted); cursor: pointer; transition: background .15s, color .15s; }
+    .seg-btn.active { background: #fff; color: var(--primary); box-shadow: var(--shadow-sm); }
+    .delta-badge { font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 3px; padding: 3px 10px; border-radius: var(--radius-pill); }
+    .delta-up { background: var(--success-soft); color: #0f7a4c; }
+    .delta-down { background: var(--primary-soft); color: var(--primary-d); }
+    .delta-flat { background: #f1f2f8; color: var(--muted); }
+    .cal-dow { display: grid; grid-template-columns: repeat(7,1fr); gap: 6px; margin-bottom: 6px; }
+    .cal-dow div { text-align: center; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 6px; }
+    .cal-cell { aspect-ratio: 1; border-radius: 10px; background: #f1f2f8; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: transform .12s, box-shadow .12s; position: relative; }
+    .cal-cell:not(.cal-empty):hover { transform: scale(1.07); box-shadow: var(--shadow-sm); z-index: 1; }
+    .cal-empty { background: transparent; cursor: default; }
+    .cal-daynum { font-size: 11px; font-weight: 600; color: var(--muted); }
+    .cal-count { font-size: 13px; font-weight: 800; line-height: 1; margin-top: 2px; }
+    .cal-lvl1 { background: #fde2e2; }
+    .cal-lvl2 { background: #f7b0b0; }
+    .cal-lvl3 { background: #ef7f7f; }
+    .cal-lvl4 { background: var(--primary); }
+    .cal-lvl1 .cal-daynum, .cal-lvl2 .cal-daynum, .cal-lvl3 .cal-daynum,
+    .cal-lvl1 .cal-count,  .cal-lvl2 .cal-count,  .cal-lvl3 .cal-count  { color: #7a1414; }
+    .cal-lvl4 .cal-daynum, .cal-lvl4 .cal-count { color: #fff; }
+    .cal-today { box-shadow: 0 0 0 2px var(--secondary); }
+    .cal-today:not(.cal-empty):hover { box-shadow: 0 0 0 2px var(--secondary), var(--shadow-sm); }
+    @media (max-width: 768px) {
+      .cal-dow div { font-size: 9px; }
+      .cal-daynum { font-size: 10px; }
+      .cal-count { font-size: 11px; }
+    }
     /* ── IMPRESIÓN ── */
     @media print {
       @page { margin: 10mm; }
@@ -315,11 +349,57 @@
     <!-- DASHBOARD -->
     <section class="page active" id="page-dashboard">
       <div class="stat-grid" id="dash-stats"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+
+      <!-- Comparativo mensual + Semana actual -->
+      <div class="dash-row-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
         <div class="card">
-          <div style="font-weight:700;margin-bottom:12px;color:var(--secondary);display:flex;align-items:center;gap:7px"><span data-icon="clipboard"></span> Ordenes Recientes</div>
-          <div id="dash-orders-list"><p style="color:var(--muted);font-size:13px">Sin ordenes.</p></div>
+          <div class="card-title">Órdenes Recibidas — Mes Actual vs Anterior</div>
+          <div style="display:flex;align-items:center;gap:18px;margin-top:8px">
+            <div style="flex-shrink:0">
+              <div class="card-value" id="mes-actual-count">0</div>
+              <div id="mes-delta-badge" style="margin-top:6px"></div>
+            </div>
+            <div style="flex:1;height:76px;min-width:0"><canvas id="chart-mes-comparativo"></canvas></div>
+          </div>
         </div>
+        <div class="card">
+          <div class="section-header" style="margin-bottom:10px">
+            <div>
+              <div class="card-title" style="margin-bottom:2px">Esta Semana (Lun–Sáb)</div>
+              <div style="font-size:20px;font-weight:700;color:var(--primary)" id="semana-total">0</div>
+            </div>
+            <div class="segmented">
+              <button class="seg-btn active" data-metric="recibidas" onclick="setDashMetric('recibidas')">Recibidas</button>
+              <button class="seg-btn" data-metric="completadas" onclick="setDashMetric('completadas')">Completadas</button>
+            </div>
+          </div>
+          <div style="height:110px"><canvas id="chart-semana"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Calendario interactivo -->
+      <div class="card" style="margin-bottom:14px">
+        <div class="section-header">
+          <h3 style="font-size:15px;margin:0">Calendario de Trabajos</h3>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <div class="segmented">
+              <button class="seg-btn active" data-metric="recibidas" onclick="setDashMetric('recibidas')">Recibidas</button>
+              <button class="seg-btn" data-metric="completadas" onclick="setDashMetric('completadas')">Completadas</button>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <button class="btn btn-outline btn-sm btn-icon" onclick="calMesAnterior()" title="Mes anterior">‹</button>
+              <span id="cal-mes-label" style="font-weight:600;font-size:13px;min-width:120px;text-align:center;display:inline-block"></span>
+              <button class="btn btn-outline btn-sm btn-icon" onclick="calMesSiguiente()" title="Mes siguiente">›</button>
+            </div>
+          </div>
+        </div>
+        <div class="cal-dow"><div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div><div>Dom</div></div>
+        <div id="calendario-grid" class="cal-grid"></div>
+      </div>
+
+      <div class="card">
+        <div style="font-weight:700;margin-bottom:12px;color:var(--secondary);display:flex;align-items:center;gap:7px"><span data-icon="clipboard"></span> Ordenes Recientes</div>
+        <div id="dash-orders-list"><p style="color:var(--muted);font-size:13px">Sin ordenes.</p></div>
       </div>
     </section>
 
@@ -820,6 +900,15 @@
     <div class="modal-body" id="detalle-body"></div>
   </div>
 </div>
+
+<!-- MODAL DETALLE DE DIA (calendario dashboard) -->
+<dialog class="modal-dialog" id="modal-dia-detalle">
+  <div class="modal-header">
+    <h3 id="dia-detalle-titulo">Órdenes del día</h3>
+    <button class="modal-close" onclick="closeModal('modal-dia-detalle')">✕</button>
+  </div>
+  <div class="modal-body" id="dia-detalle-body"></div>
+</dialog>
 
 <!-- MODAL REFACCION -->
 <div class="modal-backdrop" id="modal-part">
@@ -1408,6 +1497,185 @@ function renderDashboard() {
         <div style="font-weight:600;font-size:13px">${getVehiculoLabel(o.vehiculoId)}</div>
         <div style="font-size:12px;color:var(--muted)">${getClienteName(o.clienteId)} • ${fmt((+o.manoObra||0)+(+o.totalMaterial||0))}</div></div>`).join('')
     : '<p style="color:var(--muted);font-size:13px">Sin ordenes.</p>';
+
+  renderMesComparativo();
+  renderSemanaChart();
+  renderCalendario();
+}
+
+/* ═══════════════════════════════════════════════════════════════ ANALITICA DASHBOARD */
+let _dashMetric = 'recibidas'; // 'recibidas' (creadoEn) | 'completadas' (completadoEn)
+let _calMonth = (() => { const d = new Date(); d.setUTCDate(1); d.setUTCHours(0,0,0,0); return d; })();
+let _chartMes = null, _chartSemana = null;
+
+function _dateField() { return _dashMetric === 'completadas' ? 'completadoEn' : 'creadoEn'; }
+
+/* Todos los widgets usan el mismo truco de fecha que "Ingresos Hoy": comparar el
+   prefijo YYYY-MM-DD del ISO string guardado (creadoEn/completadoEn se generan con
+   new Date().toISOString()), para no mezclar convenciones de zona horaria. */
+function setDashMetric(metric) {
+  _dashMetric = metric;
+  document.querySelectorAll('.seg-btn[data-metric]').forEach(b => b.classList.toggle('active', b.dataset.metric === metric));
+  renderSemanaChart();
+  renderCalendario();
+}
+
+function _monthKeyOffset(offset) {
+  const now = new Date();
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + offset, 1));
+  return d.toISOString().slice(0, 7); // 'YYYY-MM'
+}
+
+function renderMesComparativo() {
+  const ordenes = DB.ordenes();
+  const keyActual = _monthKeyOffset(0);
+  const keyAnterior = _monthKeyOffset(-1);
+  const countActual = ordenes.filter(o => o.creadoEn?.startsWith(keyActual)).length;
+  const countAnterior = ordenes.filter(o => o.creadoEn?.startsWith(keyAnterior)).length;
+
+  document.getElementById('mes-actual-count').textContent = countActual;
+
+  const badgeEl = document.getElementById('mes-delta-badge');
+  if (countAnterior === 0) {
+    badgeEl.innerHTML = countActual > 0
+      ? `<span class="delta-badge delta-up">▲ Nuevo</span>`
+      : `<span class="delta-badge delta-flat">Sin datos aún</span>`;
+  } else {
+    const delta = Math.round(((countActual - countAnterior) / countAnterior) * 100);
+    const cls = delta > 0 ? 'delta-up' : delta < 0 ? 'delta-down' : 'delta-flat';
+    const arrow = delta > 0 ? '▲' : delta < 0 ? '▼' : '—';
+    badgeEl.innerHTML = `<span class="delta-badge ${cls}">${arrow} ${Math.abs(delta)}% vs mes anterior</span>`;
+  }
+
+  const nombreAnterior = new Date(keyAnterior + '-02T00:00:00Z').toLocaleDateString('es-MX', { month: 'short', timeZone: 'UTC' });
+  const nombreActual = new Date(keyActual + '-02T00:00:00Z').toLocaleDateString('es-MX', { month: 'short', timeZone: 'UTC' });
+
+  if (_chartMes) _chartMes.destroy();
+  _chartMes = new Chart(document.getElementById('chart-mes-comparativo'), {
+    type: 'bar',
+    data: {
+      labels: [nombreAnterior, nombreActual],
+      datasets: [{ data: [countAnterior, countActual], backgroundColor: ['#d7d9e6', '#ec1c24'], borderRadius: 6, maxBarThickness: 36 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.raw + ' órdenes' } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+        y: { display: false, beginAtZero: true }
+      }
+    }
+  });
+}
+
+function _startOfWeekMonday(d) {
+  const day = d.getUTCDay(); // 0=domingo..6=sabado
+  const diff = (day === 0 ? -6 : 1) - day;
+  const monday = new Date(d);
+  monday.setUTCDate(d.getUTCDate() + diff);
+  monday.setUTCHours(0, 0, 0, 0);
+  return monday;
+}
+
+function renderSemanaChart() {
+  const field = _dateField();
+  const ordenes = DB.ordenes();
+  const monday = _startOfWeekMonday(new Date());
+  const dias = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  const hoyKey = new Date().toISOString().slice(0, 10);
+
+  const keys = dias.map((_, i) => {
+    const d = new Date(monday);
+    d.setUTCDate(monday.getUTCDate() + i);
+    return d.toISOString().slice(0, 10);
+  });
+  const counts = keys.map(key => ordenes.filter(o => o[field]?.startsWith(key)).length);
+  const colores = keys.map(key => key === hoyKey ? '#ec1c24' : '#f3b8ba');
+
+  document.getElementById('semana-total').textContent = counts.reduce((a, b) => a + b, 0);
+
+  if (_chartSemana) _chartSemana.destroy();
+  _chartSemana = new Chart(document.getElementById('chart-semana'), {
+    type: 'bar',
+    data: { labels: dias, datasets: [{ data: counts, backgroundColor: colores, borderRadius: 6, maxBarThickness: 30 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => c.raw + (_dashMetric === 'completadas' ? ' completadas' : ' recibidas') } }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+        y: { beginAtZero: true, ticks: { precision: 0, font: { size: 10 } }, grid: { color: '#eef0f7' } }
+      }
+    }
+  });
+}
+
+function calMesAnterior() {
+  _calMonth = new Date(Date.UTC(_calMonth.getUTCFullYear(), _calMonth.getUTCMonth() - 1, 1));
+  renderCalendario();
+}
+function calMesSiguiente() {
+  _calMonth = new Date(Date.UTC(_calMonth.getUTCFullYear(), _calMonth.getUTCMonth() + 1, 1));
+  renderCalendario();
+}
+
+function renderCalendario() {
+  const field = _dateField();
+  const ordenes = DB.ordenes();
+  const year = _calMonth.getUTCFullYear(), month = _calMonth.getUTCMonth();
+
+  const label = _calMonth.toLocaleDateString('es-MX', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  document.getElementById('cal-mes-label').textContent = label.charAt(0).toUpperCase() + label.slice(1);
+
+  const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  const monthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
+  const counts = {};
+  ordenes.forEach(o => {
+    const v = o[field];
+    if (!v || !v.startsWith(monthPrefix)) return;
+    const day = +v.slice(8, 10);
+    counts[day] = (counts[day] || 0) + 1;
+  });
+  const maxCount = Math.max(1, ...Object.values(counts));
+
+  const firstDow = (new Date(Date.UTC(year, month, 1)).getUTCDay() + 6) % 7; // 0=lunes
+  const hoyKey = new Date().toISOString().slice(0, 10);
+  const metricLabel = _dashMetric === 'completadas' ? 'completadas' : 'recibidas';
+
+  let html = '';
+  for (let i = 0; i < firstDow; i++) html += `<div class="cal-cell cal-empty"></div>`;
+  for (let day = 1; day <= daysInMonth; day++) {
+    const n = counts[day] || 0;
+    const key = `${monthPrefix}-${String(day).padStart(2, '0')}`;
+    const lvl = n === 0 ? 0 : Math.max(1, Math.ceil((n / maxCount) * 4));
+    const isToday = key === hoyKey;
+    html += `<div class="cal-cell cal-lvl${lvl}${isToday ? ' cal-today' : ''}" title="${n} ${metricLabel} el ${day}" onclick="verOrdenesDia('${key}')">
+      <span class="cal-daynum">${day}</span>${n > 0 ? `<span class="cal-count">${n}</span>` : ''}
+    </div>`;
+  }
+  document.getElementById('calendario-grid').innerHTML = html;
+}
+
+function verOrdenesDia(dateKey) {
+  const field = _dateField();
+  const ordenes = DB.ordenes().filter(o => o[field]?.startsWith(dateKey));
+  const [y, m, d] = dateKey.split('-').map(Number);
+  const fechaLegible = new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const metricLabel = _dashMetric === 'completadas' ? 'Completadas' : 'Recibidas';
+
+  document.getElementById('dia-detalle-titulo').textContent = `${metricLabel} el ${fechaLegible}`;
+  document.getElementById('dia-detalle-body').innerHTML = ordenes.length
+    ? ordenes.map(o => {
+        const total = (+o.totalMaterial || 0) + (+o.manoObra || 0);
+        return `<div style="padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="closeModal('modal-dia-detalle');viewOrden('${o.id}')">
+          <div style="font-weight:600;font-size:13px">${getVehiculoLabel(o.vehiculoId)}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:6px">${getClienteName(o.clienteId)} • ${fmt(total)} ${badge(STATUS_LABELS, o.estado)}</div>
+        </div>`;
+      }).join('')
+    : `<p style="color:var(--muted);font-size:13px;text-align:center;padding:24px 0">Sin órdenes este día.</p>`;
+  openModal('modal-dia-detalle');
 }
 
 /* ═══════════════════════════════════════════════════════════════ CLIENTES */

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'flecha-v12';
+const CACHE_NAME = 'flecha-v13';
 
 // Solo se cachean assets estáticos que NO cambian frecuentemente
 const PRECACHE_URLS = [
