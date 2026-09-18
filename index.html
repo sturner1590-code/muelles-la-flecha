@@ -253,14 +253,15 @@
     .delta-up { background: var(--success-soft); color: #0f7a4c; }
     .delta-down { background: var(--primary-soft); color: var(--primary-d); }
     .delta-flat { background: #f1f2f8; color: var(--muted); }
-    .cal-dow { display: grid; grid-template-columns: repeat(7,1fr); gap: 6px; margin-bottom: 6px; }
-    .cal-dow div { text-align: center; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
-    .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 6px; }
-    .cal-cell { aspect-ratio: 1; border-radius: 10px; background: #f1f2f8; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: transform .12s, box-shadow .12s; position: relative; }
-    .cal-cell:not(.cal-empty):hover { transform: scale(1.07); box-shadow: var(--shadow-sm); z-index: 1; }
+    .cal-grid-wrap { }
+    .cal-dow { display: grid; grid-template-columns: repeat(7,1fr); gap: 5px; margin-bottom: 5px; }
+    .cal-dow div { text-align: center; font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 5px; }
+    .cal-cell { aspect-ratio: 1; max-width: 48px; max-height: 48px; margin: 0 auto; width: 100%; border-radius: 8px; background: #f1f2f8; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: transform .12s, box-shadow .12s; position: relative; }
+    .cal-cell:not(.cal-empty):hover { transform: scale(1.1); box-shadow: var(--shadow-sm); z-index: 1; }
     .cal-empty { background: transparent; cursor: default; }
-    .cal-daynum { font-size: 11px; font-weight: 600; color: var(--muted); }
-    .cal-count { font-size: 13px; font-weight: 800; line-height: 1; margin-top: 2px; }
+    .cal-daynum { font-size: 10px; font-weight: 600; color: var(--muted); }
+    .cal-count { font-size: 11px; font-weight: 800; line-height: 1; margin-top: 1px; }
     .cal-lvl1 { background: #fde2e2; }
     .cal-lvl2 { background: #f7b0b0; }
     .cal-lvl3 { background: #ef7f7f; }
@@ -270,10 +271,24 @@
     .cal-lvl4 .cal-daynum, .cal-lvl4 .cal-count { color: #fff; }
     .cal-today { box-shadow: 0 0 0 2px var(--secondary); }
     .cal-today:not(.cal-empty):hover { box-shadow: 0 0 0 2px var(--secondary), var(--shadow-sm); }
+    /* Vista Trimestre/Semestre/Año: varios meses a la vez, max 3 por fila */
+    .cal-multi { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px 14px; }
+    .cal-month-title { font-size: 11px; font-weight: 700; color: var(--text); margin-bottom: 5px; text-transform: capitalize; text-align: center; }
+    .cal-month-compact .cal-grid { gap: 2px; max-width: 154px; margin: 0 auto; }
+    .cal-month-compact .cal-cell { max-width: 20px; max-height: 20px; border-radius: 3px; }
+    .cal-month-compact .cal-cell:not(.cal-empty):hover { transform: scale(1.3); }
+    .cal-month-compact .cal-today { box-shadow: 0 0 0 1.5px var(--secondary); }
+    /* Ranking Top Clientes */
+    .top-rank { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0; background: #f1f2f8; color: var(--muted); }
+    .top-rank-podium { background: var(--primary); color: #fff; }
     @media (max-width: 768px) {
       .cal-dow div { font-size: 9px; }
-      .cal-daynum { font-size: 10px; }
-      .cal-count { font-size: 11px; }
+      .cal-daynum { font-size: 9px; }
+      .cal-count { font-size: 10px; }
+      .cal-cell { max-width: 38px; max-height: 38px; }
+      .cal-multi { grid-template-columns: repeat(3, 1fr); gap: 12px 8px; }
+      .cal-month-compact .cal-cell { max-width: 13px; max-height: 13px; }
+      .cal-month-compact .cal-grid { max-width: 105px; }
     }
     /* ── IMPRESIÓN ── */
     @media print {
@@ -381,25 +396,37 @@
       <div class="card" style="margin-bottom:14px">
         <div class="section-header">
           <h3 style="font-size:15px;margin:0">Calendario de Trabajos</h3>
-          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-            <div class="segmented">
-              <button class="seg-btn active" data-metric="recibidas" onclick="setDashMetric('recibidas')">Recibidas</button>
-              <button class="seg-btn" data-metric="completadas" onclick="setDashMetric('completadas')">Completadas</button>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <button class="btn btn-outline btn-sm btn-icon" onclick="calMesAnterior()" title="Mes anterior">‹</button>
-              <span id="cal-mes-label" style="font-weight:600;font-size:13px;min-width:120px;text-align:center;display:inline-block"></span>
-              <button class="btn btn-outline btn-sm btn-icon" onclick="calMesSiguiente()" title="Mes siguiente">›</button>
-            </div>
+          <div class="segmented">
+            <button class="seg-btn active" data-metric="recibidas" onclick="setDashMetric('recibidas')">Recibidas</button>
+            <button class="seg-btn" data-metric="completadas" onclick="setDashMetric('completadas')">Completadas</button>
           </div>
         </div>
-        <div class="cal-dow"><div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div><div>Dom</div></div>
-        <div id="calendario-grid" class="cal-grid"></div>
+        <div class="section-header" style="margin-top:-4px">
+          <div class="segmented">
+            <button class="seg-btn active" data-view="mes" onclick="setCalViewMode('mes')">Mes</button>
+            <button class="seg-btn" data-view="trimestre" onclick="setCalViewMode('trimestre')">Trimestre</button>
+            <button class="seg-btn" data-view="semestre" onclick="setCalViewMode('semestre')">Semestre</button>
+            <button class="seg-btn" data-view="anio" onclick="setCalViewMode('anio')">Año</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <button class="btn btn-outline btn-sm btn-icon" onclick="calAnterior()" title="Período anterior">‹</button>
+            <span id="cal-mes-label" style="font-weight:600;font-size:13px;min-width:120px;text-align:center;display:inline-block"></span>
+            <button class="btn btn-outline btn-sm btn-icon" onclick="calSiguiente()" title="Período siguiente">›</button>
+          </div>
+        </div>
+        <div id="calendario-grid" class="cal-grid-wrap"></div>
       </div>
 
-      <div class="card">
-        <div style="font-weight:700;margin-bottom:12px;color:var(--secondary);display:flex;align-items:center;gap:7px"><span data-icon="clipboard"></span> Ordenes Recientes</div>
-        <div id="dash-orders-list"><p style="color:var(--muted);font-size:13px">Sin ordenes.</p></div>
+      <div class="dash-row-2col" style="display:grid;grid-template-columns:1.1fr 1fr;gap:14px">
+        <div class="card">
+          <div style="font-weight:700;margin-bottom:12px;color:var(--secondary);display:flex;align-items:center;gap:7px"><span data-icon="clipboard"></span> Ordenes Recientes</div>
+          <div id="dash-orders-list"><p style="color:var(--muted);font-size:13px">Sin ordenes.</p></div>
+        </div>
+        <div class="card">
+          <div style="font-weight:700;margin-bottom:4px;color:var(--secondary);display:flex;align-items:center;gap:7px"><span data-icon="trending"></span> Top 10 Clientes — <span id="top-clientes-anio"></span></div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Por cantidad de trabajos este año</div>
+          <div id="top-clientes-list"></div>
+        </div>
       </div>
     </section>
 
@@ -1501,11 +1528,13 @@ function renderDashboard() {
   renderMesComparativo();
   renderSemanaChart();
   renderCalendario();
+  renderTopClientes();
 }
 
 /* ═══════════════════════════════════════════════════════════════ ANALITICA DASHBOARD */
 let _dashMetric = 'recibidas'; // 'recibidas' (creadoEn) | 'completadas' (completadoEn)
 let _calMonth = (() => { const d = new Date(); d.setUTCDate(1); d.setUTCHours(0,0,0,0); return d; })();
+let _calViewMode = 'mes'; // 'mes' | 'trimestre' | 'semestre' | 'anio'
 let _chartMes = null, _chartSemana = null;
 
 function _dateField() { return _dashMetric === 'completadas' ? 'completadoEn' : 'creadoEn'; }
@@ -1612,23 +1641,60 @@ function renderSemanaChart() {
   });
 }
 
-function calMesAnterior() {
-  _calMonth = new Date(Date.UTC(_calMonth.getUTCFullYear(), _calMonth.getUTCMonth() - 1, 1));
-  renderCalendario();
+const _CAL_STEP = { mes: 1, trimestre: 3, semestre: 6, anio: 12 };
+
+/* Alinea _calMonth al inicio del periodo correspondiente: mes tal cual, trimestre a
+   Ene/Abr/Jul/Oct, semestre a Ene/Jul, año a Enero. Asi "Trimestre"/"Semestre"/"Año"
+   siempre muestran periodos de calendario reales, no una ventana movil arbitraria. */
+function _snapCalMonth() {
+  const y = _calMonth.getUTCFullYear(), m = _calMonth.getUTCMonth();
+  let startMonth = m;
+  if (_calViewMode === 'trimestre') startMonth = Math.floor(m / 3) * 3;
+  else if (_calViewMode === 'semestre') startMonth = Math.floor(m / 6) * 6;
+  else if (_calViewMode === 'anio') startMonth = 0;
+  _calMonth = new Date(Date.UTC(y, startMonth, 1));
 }
-function calMesSiguiente() {
-  _calMonth = new Date(Date.UTC(_calMonth.getUTCFullYear(), _calMonth.getUTCMonth() + 1, 1));
+
+function setCalViewMode(mode) {
+  _calViewMode = mode;
+  document.querySelectorAll('.seg-btn[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === mode));
+  _snapCalMonth();
   renderCalendario();
 }
 
-function renderCalendario() {
+function calAnterior() {
+  const step = _CAL_STEP[_calViewMode];
+  _calMonth = new Date(Date.UTC(_calMonth.getUTCFullYear(), _calMonth.getUTCMonth() - step, 1));
+  renderCalendario();
+}
+function calSiguiente() {
+  const step = _CAL_STEP[_calViewMode];
+  _calMonth = new Date(Date.UTC(_calMonth.getUTCFullYear(), _calMonth.getUTCMonth() + step, 1));
+  renderCalendario();
+}
+
+function _monthsForView() {
+  const count = _CAL_STEP[_calViewMode];
+  const months = [];
+  for (let i = 0; i < count; i++) months.push(new Date(Date.UTC(_calMonth.getUTCFullYear(), _calMonth.getUTCMonth() + i, 1)));
+  return months;
+}
+
+function _periodLabel(months) {
+  const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+  if (_calViewMode === 'mes') return cap(months[0].toLocaleDateString('es-MX', { month: 'long', year: 'numeric', timeZone: 'UTC' }));
+  if (_calViewMode === 'anio') return String(months[0].getUTCFullYear());
+  const fmtM = d => cap(d.toLocaleDateString('es-MX', { month: 'short', timeZone: 'UTC' }).replace('.', ''));
+  const last = months[months.length - 1];
+  return `${fmtM(months[0])}–${fmtM(last)} ${last.getUTCFullYear()}`;
+}
+
+/* Genera el bloque de un mes (grid de dias). compact=true = vista Trimestre/Semestre/Año:
+   celdas pequeñas, sin numero de dia visible (solo color + tooltip), estilo mapa de calor. */
+function _renderMiniMonth(monthDate, compact) {
   const field = _dateField();
   const ordenes = DB.ordenes();
-  const year = _calMonth.getUTCFullYear(), month = _calMonth.getUTCMonth();
-
-  const label = _calMonth.toLocaleDateString('es-MX', { month: 'long', year: 'numeric', timeZone: 'UTC' });
-  document.getElementById('cal-mes-label').textContent = label.charAt(0).toUpperCase() + label.slice(1);
-
+  const year = monthDate.getUTCFullYear(), month = monthDate.getUTCMonth();
   const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
   const monthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
   const counts = {};
@@ -1639,23 +1705,39 @@ function renderCalendario() {
     counts[day] = (counts[day] || 0) + 1;
   });
   const maxCount = Math.max(1, ...Object.values(counts));
-
-  const firstDow = (new Date(Date.UTC(year, month, 1)).getUTCDay() + 6) % 7; // 0=lunes
+  const firstDow = (new Date(Date.UTC(year, month, 1)).getUTCDay() + 6) % 7;
   const hoyKey = new Date().toISOString().slice(0, 10);
   const metricLabel = _dashMetric === 'completadas' ? 'completadas' : 'recibidas';
+  const monthTitle = monthDate.toLocaleDateString('es-MX', { month: 'long', year: compact ? undefined : 'numeric', timeZone: 'UTC' });
+  const monthTitleCap = monthTitle.charAt(0).toUpperCase() + monthTitle.slice(1);
 
-  let html = '';
-  for (let i = 0; i < firstDow; i++) html += `<div class="cal-cell cal-empty"></div>`;
+  let cells = '';
+  for (let i = 0; i < firstDow; i++) cells += `<div class="cal-cell cal-empty"></div>`;
   for (let day = 1; day <= daysInMonth; day++) {
     const n = counts[day] || 0;
     const key = `${monthPrefix}-${String(day).padStart(2, '0')}`;
     const lvl = n === 0 ? 0 : Math.max(1, Math.ceil((n / maxCount) * 4));
     const isToday = key === hoyKey;
-    html += `<div class="cal-cell cal-lvl${lvl}${isToday ? ' cal-today' : ''}" title="${n} ${metricLabel} el ${day}" onclick="verOrdenesDia('${key}')">
-      <span class="cal-daynum">${day}</span>${n > 0 ? `<span class="cal-count">${n}</span>` : ''}
+    cells += `<div class="cal-cell cal-lvl${lvl}${isToday ? ' cal-today' : ''}" title="${n} ${metricLabel} · ${day} de ${monthTitleCap}" onclick="verOrdenesDia('${key}')">
+      ${compact ? '' : `<span class="cal-daynum">${day}</span>${n > 0 ? `<span class="cal-count">${n}</span>` : ''}`}
     </div>`;
   }
-  document.getElementById('calendario-grid').innerHTML = html;
+
+  const dow = compact ? '' : `<div class="cal-dow"><div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div><div>Dom</div></div>`;
+  return `<div class="cal-month-block${compact ? ' cal-month-compact' : ''}">
+    ${compact ? `<div class="cal-month-title">${monthTitleCap}</div>` : ''}
+    ${dow}
+    <div class="cal-grid">${cells}</div>
+  </div>`;
+}
+
+function renderCalendario() {
+  const months = _monthsForView();
+  const compact = months.length > 1;
+  document.getElementById('cal-mes-label').textContent = _periodLabel(months);
+  const wrap = document.getElementById('calendario-grid');
+  wrap.className = compact ? 'cal-grid-wrap cal-multi' : 'cal-grid-wrap';
+  wrap.innerHTML = months.map(m => _renderMiniMonth(m, compact)).join('');
 }
 
 function verOrdenesDia(dateKey) {
@@ -1676,6 +1758,37 @@ function verOrdenesDia(dateKey) {
       }).join('')
     : `<p style="color:var(--muted);font-size:13px;text-align:center;padding:24px 0">Sin órdenes este día.</p>`;
   openModal('modal-dia-detalle');
+}
+
+/* Top 10 clientes del año en curso por cantidad de ordenes (todas, sin importar estado),
+   con el total facturado (material + mano de obra) que generaron. */
+function renderTopClientes() {
+  const anio = new Date().toISOString().slice(0, 4);
+  document.getElementById('top-clientes-anio').textContent = anio;
+
+  const ordenes = DB.ordenes().filter(o => o.creadoEn?.startsWith(anio) && o.clienteId && o.clienteId !== 'NA');
+  const porCliente = {};
+  ordenes.forEach(o => {
+    if (!porCliente[o.clienteId]) porCliente[o.clienteId] = { count: 0, total: 0 };
+    porCliente[o.clienteId].count++;
+    porCliente[o.clienteId].total += (+o.totalMaterial || 0) + (+o.manoObra || 0);
+  });
+
+  const top = Object.entries(porCliente)
+    .map(([id, d]) => ({ id, nombre: getClienteName(id), ...d }))
+    .sort((a, b) => b.count - a.count || b.total - a.total)
+    .slice(0, 10);
+
+  document.getElementById('top-clientes-list').innerHTML = top.length
+    ? top.map((c, i) => `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div class="top-rank${i < 3 ? ' top-rank-podium' : ''}">${i + 1}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.nombre}</div>
+          <div style="font-size:11px;color:var(--muted)">${c.count} ${c.count === 1 ? 'trabajo' : 'trabajos'}</div>
+        </div>
+        <div style="font-weight:700;font-size:13px;color:var(--primary);white-space:nowrap;flex-shrink:0">${fmt(c.total)}</div>
+      </div>`).join('')
+    : `<p style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0">Sin órdenes registradas este año.</p>`;
 }
 
 /* ═══════════════════════════════════════════════════════════════ CLIENTES */
