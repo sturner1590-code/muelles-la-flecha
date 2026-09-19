@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://qabnuymelcceeecvpxso.supabase.co wss://qabnuymelcceeecvpxso.supabase.co https://vpic.nhtsa.dot.gov; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>Muelles y Mofles La Flecha</title>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -20,9 +22,9 @@
       });
     }
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.min.js" integrity="sha384-JBR+x8blGwjDRO63aHCGiZMD4VNiTR4ZUGA+N6ZKLf3zNt1fK8IBpcgPaMrxqWBp" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" integrity="sha384-NrKB+u6Ts6AtkIhwPixiKTzgSKNblyhlk0Sohlgar9UHUBzai/sgnNNWWd291xqt" crossorigin="anonymous"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
@@ -314,6 +316,28 @@
   <div style="font-size:13px;color:#6b7280">Conectando con Supabase</div>
 </div>
 
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:9998;align-items:center;justify-content:center;flex-direction:column;padding:20px">
+  <div class="card" style="width:100%;max-width:360px;padding:28px 26px;text-align:center">
+    <img src="logo-la-flecha.png" alt="Refaccionaria La Flecha" style="width:100%;max-width:170px;margin:0 auto 18px;display:block">
+    <div id="login-error" style="display:none;background:var(--primary-soft);color:var(--primary-d);font-size:12px;font-weight:600;border-radius:var(--radius);padding:9px 12px;margin-bottom:14px;text-align:left"></div>
+    <form id="login-form" onsubmit="return handleLogin(event)" style="text-align:left">
+      <div class="form-group">
+        <label>Correo</label>
+        <input class="form-control" type="email" id="login-email" autocomplete="username" required placeholder="tu@correo.com">
+      </div>
+      <div class="form-group" style="margin-bottom:18px">
+        <label>Contraseña</label>
+        <input class="form-control" type="password" id="login-password" autocomplete="current-password" required placeholder="••••••••">
+      </div>
+      <button class="btn btn-primary" type="submit" id="login-submit" style="width:100%;justify-content:center">Iniciar sesión</button>
+    </form>
+    <div style="font-size:11px;color:var(--muted);margin-top:16px">Acceso solo para el equipo de Muelles y Mofles La Flecha.<br>¿No tienes cuenta? Pide que te den de alta.</div>
+  </div>
+</div>
+
+<div id="app-shell" style="display:none">
 <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-logo">
@@ -356,7 +380,11 @@
       <button class="hamburger" onclick="toggleSidebar()"><span data-icon="menu" data-icon-size="22"></span></button>
       <h2 id="page-title">Dashboard</h2>
     </div>
-    <button class="btn btn-outline btn-sm" onclick="diagnosticarConexion()" title="Verificar conexión con Supabase" style="font-size:12px"><span data-icon="activity"></span> Diagnóstico</button>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span id="user-email-label" style="font-size:12px;color:var(--muted);display:none"></span>
+      <button class="btn btn-outline btn-sm" onclick="diagnosticarConexion()" title="Verificar conexión con Supabase" style="font-size:12px"><span data-icon="activity"></span> Diagnóstico</button>
+      <button class="btn btn-outline btn-sm" onclick="logout()" title="Cerrar sesión" style="font-size:12px"><span data-icon="logout"></span> Salir</button>
+    </div>
   </header>
 
   <main class="content">
@@ -584,6 +612,7 @@
     </section>
 
   </main>
+</div>
 </div>
 
 <div class="toast-container" id="toasts"></div>
@@ -1226,6 +1255,7 @@ const ICONS = {
   filetext:     '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>',
   plus:         '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
   x:            '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+  logout:       '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>',
 };
 function icon(name, size) {
   size = size || 16;
@@ -1456,7 +1486,7 @@ function populateDatalist(dataListId, data, displayField, valueField = 'id') {
   const datalist = document.getElementById(dataListId);
   if (!datalist) return;
   datalist.innerHTML = data
-    .map(item => `<option value="${item[valueField]}">${item[displayField]}</option>`)
+    .map(item => `<option value="${esc(item[valueField])}">${esc(item[displayField])}</option>`)
     .join('');
 }
 
@@ -1478,6 +1508,14 @@ function badge(data, val) {
 }
 
 function fmt(n) { return '$' + Number(n||0).toLocaleString('es-MX', {minimumFractionDigits:2}); }
+
+/* Escapa HTML para insertar de forma segura texto proveniente de la base de datos
+   (nombres, notas, descripciones, etc.) dentro de innerHTML — previene XSS
+   almacenado si alguien llega a escribir un campo con contenido malicioso. */
+function esc(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
 function fmtDate(iso) {
   if (!iso) return '—';
   return new Date(iso).toLocaleDateString('es-MX', {day:'2-digit',month:'short',year:'numeric'});
@@ -1489,7 +1527,7 @@ function fmtDateTime(iso) {
 
 function getClienteName(id) {
   if (!id || id === 'NA') return 'N/A';
-  return DB.clientes().find(c=>c.id===id)?.nombre || '—';
+  return esc(DB.clientes().find(c=>c.id===id)?.nombre || '—');
 }
 function getVehiculoLabel(id) {
   if (!id || id === 'NA') return 'N/A';
@@ -1499,7 +1537,7 @@ function getVehiculoLabel(id) {
   if (!label) label = v.numeroUnidad || v.placa || v.vin || '—';
   else if (v.numeroUnidad) label += ` · ${v.numeroUnidad}`;
   else if (v.placa) label += ` · ${v.placa}`;
-  return label;
+  return esc(label);
 }
 
 /* ═══════════════════════════════════════════════════════════════ DASHBOARD */
@@ -1797,7 +1835,7 @@ function renderClientes() {
   let rows = DB.clientes();
   if (q) rows = rows.filter(c=>c.nombre.toLowerCase().includes(q)||c.telefono.includes(q));
   document.getElementById('tbody-clientes').innerHTML = rows.length
-    ? rows.map(c => `<tr><td><strong>${c.nombre}</strong></td><td>${c.telefono}</td><td>${c.razonSocial||'—'}</td><td><span class="badge badge-blue">${c.tipoCliente}</span></td><td>${c.email||'—'}</td><td><button class="btn btn-outline btn-sm btn-icon" onclick="editCliente('${c.id}')">${icon('edit')}</button><button class="btn btn-danger btn-sm btn-icon" onclick="deleteCliente('${c.id}')">${icon('trash')}</button></td></tr>`).join('')
+    ? rows.map(c => `<tr><td><strong>${esc(c.nombre)}</strong></td><td>${esc(c.telefono)}</td><td>${esc(c.razonSocial)||'—'}</td><td><span class="badge badge-blue">${esc(c.tipoCliente)}</span></td><td>${esc(c.email)||'—'}</td><td><button class="btn btn-outline btn-sm btn-icon" onclick="editCliente('${c.id}')">${icon('edit')}</button><button class="btn btn-danger btn-sm btn-icon" onclick="deleteCliente('${c.id}')">${icon('trash')}</button></td></tr>`).join('')
     : `<tr><td colspan="6" class="empty-state">Sin clientes</td></tr>`;
 }
 
@@ -1976,10 +2014,10 @@ function handleFileImport() {
 function showImportPreview(type, data) {
   document.getElementById('preview-info').innerHTML = `Se encontraron <strong>${data.length}</strong> registro(s) para importar.`;
   if (type === 'clientes') {
-    const html = `<table><thead><tr><th>Nombre</th><th>Tel</th><th>Razón Social</th><th>Tipo</th></tr></thead><tbody>${data.slice(0,10).map(r => `<tr><td>${r.nombre}</td><td>${r.telefono}</td><td>${r.razonSocial}</td><td>${r.tipoCliente}</td></tr>`).join('')}</tbody></table>`;
+    const html = `<table><thead><tr><th>Nombre</th><th>Tel</th><th>Razón Social</th><th>Tipo</th></tr></thead><tbody>${data.slice(0,10).map(r => `<tr><td>${esc(r.nombre)}</td><td>${esc(r.telefono)}</td><td>${esc(r.razonSocial)}</td><td>${esc(r.tipoCliente)}</td></tr>`).join('')}</tbody></table>`;
     document.getElementById('preview-table-content').innerHTML = html;
   } else if (type === 'refacciones') {
-    const html = `<table><thead><tr><th>SKU</th><th>Nombre</th><th>Categoría</th><th>Precio</th></tr></thead><tbody>${data.slice(0,10).map(r => `<tr><td>${r.sku}</td><td>${r.nombre}</td><td>${r.categoria}</td><td>${fmt(r.precio)}</td></tr>`).join('')}</tbody></table>`;
+    const html = `<table><thead><tr><th>SKU</th><th>Nombre</th><th>Categoría</th><th>Precio</th></tr></thead><tbody>${data.slice(0,10).map(r => `<tr><td>${esc(r.sku)}</td><td>${esc(r.nombre)}</td><td>${esc(r.categoria)}</td><td>${fmt(r.precio)}</td></tr>`).join('')}</tbody></table>`;
     document.getElementById('preview-table-content').innerHTML = html;
   }
   openModal('modal-import-preview');
@@ -2154,13 +2192,13 @@ function renderVehiculos() {
   document.getElementById('tbody-vehiculos').innerHTML = rows.length
     ? rows.map(v=>{
         const cliente = v.clienteId === 'NA' ? 'N/A' : getClienteName(v.clienteId);
-        const vinPlaca = [v.placa, v.vin].filter(Boolean).join(' / ') || '—';
+        const vinPlaca = esc([v.placa, v.vin].filter(Boolean).join(' / ')) || '—';
         return `<tr>
-          <td><strong>${v.marca} ${v.modelo}</strong></td>
+          <td><strong>${esc(v.marca)} ${esc(v.modelo)}</strong></td>
           <td>${v.anio||'—'}</td>
-          <td class="hide-mobile">${v.color||'—'}</td>
+          <td class="hide-mobile">${esc(v.color)||'—'}</td>
           <td>${cliente}</td>
-          <td class="hide-mobile">${v.numeroUnidad||'—'}</td>
+          <td class="hide-mobile">${esc(v.numeroUnidad)||'—'}</td>
           <td class="hide-mobile">${vinPlaca}</td>
           <td><button class="btn btn-outline btn-sm btn-icon" onclick="editVehiculo('${v.id}')">${icon('edit')}</button><button class="btn btn-danger btn-sm btn-icon" onclick="deleteVehiculo('${v.id}')">${icon('trash')}</button></td>
         </tr>`;
@@ -2364,7 +2402,7 @@ function populateClienteSelect(selectId, selectedId) {
 
   const clientes = DB.clientes();
   datalist.innerHTML = `<option value="N/A"></option>` +
-    clientes.map(c => `<option value="${c.nombre}"></option>`).join('');
+    clientes.map(c => `<option value="${esc(c.nombre)}"></option>`).join('');
 
   // Si hay un selectedId, intentar encontrar el nombre para mostrar en el input
   if (selectedId && selectedId !== 'NA') {
@@ -2599,18 +2637,18 @@ function viewOrden(id) {
   const clienteHtml = o.clienteId === 'NA'
     ? '<span style="color:#9ca3af;font-size:13px">N/A</span>'
     : cObj
-      ? `<div style="font-size:15px;font-weight:700;color:#111827;margin-bottom:5px">${cObj.nombre}</div>
-         ${cObj.telefono ? `<div style="font-size:12px;color:#6b7280;margin-bottom:3px;display:flex;align-items:center;gap:5px">${icon('phone',12)} ${cObj.telefono}</div>` : ''}
-         ${cObj.razonSocial ? `<div style="font-size:12px;color:#6b7280;display:flex;align-items:center;gap:5px">${icon('briefcase',12)} ${cObj.razonSocial}</div>` : ''}`
+      ? `<div style="font-size:15px;font-weight:700;color:#111827;margin-bottom:5px">${esc(cObj.nombre)}</div>
+         ${cObj.telefono ? `<div style="font-size:12px;color:#6b7280;margin-bottom:3px;display:flex;align-items:center;gap:5px">${icon('phone',12)} ${esc(cObj.telefono)}</div>` : ''}
+         ${cObj.razonSocial ? `<div style="font-size:12px;color:#6b7280;display:flex;align-items:center;gap:5px">${icon('briefcase',12)} ${esc(cObj.razonSocial)}</div>` : ''}`
       : `<div style="font-size:14px;font-weight:700">${clienteNombre}</div>`;
 
   // Bloque de vehículo: Marca/Modelo/Año → Núm. Unidad → Placa → VIN
   const vehHtml = vObj ? (() => {
-    const marcaModeloAnio = [vObj.marca, vObj.modelo, vObj.anio].filter(Boolean).join(' ');
+    const marcaModeloAnio = esc([vObj.marca, vObj.modelo, vObj.anio].filter(Boolean).join(' '));
     return `<div style="margin-bottom:4px"><strong style="font-size:14px">${marcaModeloAnio || '—'}</strong></div>
-      ${vObj.numeroUnidad ? `<div style="margin-bottom:3px"><span style="color:#6b7280;font-size:12px">Núm. Unidad:</span> <strong>${vObj.numeroUnidad}</strong></div>` : ''}
-      ${vObj.placa       ? `<div style="margin-bottom:3px"><span style="color:#6b7280;font-size:12px">Placa:</span> ${vObj.placa}</div>` : ''}
-      ${vObj.vin         ? `<div><span style="color:#6b7280;font-size:12px">VIN:</span> <span style="font-family:monospace;font-size:11px;color:#374151">${vObj.vin}</span></div>` : ''}`;
+      ${vObj.numeroUnidad ? `<div style="margin-bottom:3px"><span style="color:#6b7280;font-size:12px">Núm. Unidad:</span> <strong>${esc(vObj.numeroUnidad)}</strong></div>` : ''}
+      ${vObj.placa       ? `<div style="margin-bottom:3px"><span style="color:#6b7280;font-size:12px">Placa:</span> ${esc(vObj.placa)}</div>` : ''}
+      ${vObj.vin         ? `<div><span style="color:#6b7280;font-size:12px">VIN:</span> <span style="font-family:monospace;font-size:11px;color:#374151">${esc(vObj.vin)}</span></div>` : ''}`;
   })() : '<span style="color:#9ca3af">—</span>';
 
   const lineasHtml = (o.lineas && o.lineas.length)
@@ -2623,8 +2661,8 @@ function viewOrden(id) {
           <th style="padding:9px 10px;text-align:right;color:#fff;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Subtotal</th>
         </tr></thead>
         <tbody>${o.lineas.map((l,li) => `<tr style="background:${li%2===0?'#fff':'#f0f7ff'}">
-          <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;color:#6b7280;font-family:monospace;font-size:12px">${l.sku||'—'}</td>
-          <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">${l.nombre||'—'}</td>
+          <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;color:#6b7280;font-family:monospace;font-size:12px">${esc(l.sku)||'—'}</td>
+          <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">${esc(l.nombre)||'—'}</td>
           <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:center">${l.cantidad}</td>
           <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right">${fmt(l.precioUnitario)}</td>
           <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:600">${fmt(l.subtotal)}</td>
@@ -2698,7 +2736,7 @@ function viewOrden(id) {
         <div style="background:#f59e0b;padding:7px 14px;border-radius:8px 8px 0 0;display:flex;align-items:center;gap:7px">
           <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#fff;display:flex;align-items:center;gap:5px">${icon('wrench',12)} Descripción del Trabajo</span>
         </div>
-        <div style="background:#fffbeb;border:1.5px solid #fde68a;border-top:none;border-radius:0 0 8px 8px;padding:12px;font-size:13px">${o.descripcion||'—'}</div>
+        <div style="background:#fffbeb;border:1.5px solid #fde68a;border-top:none;border-radius:0 0 8px 8px;padding:12px;font-size:13px">${esc(o.descripcion)||'—'}</div>
       </div>
 
       <!-- ══ REFACCIONES ══ -->
@@ -2734,7 +2772,7 @@ function viewOrden(id) {
         <div style="background:#92400e;padding:7px 14px;border-radius:8px 8px 0 0">
           <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#fff;display:flex;align-items:center;gap:5px">${icon('filetext',12)} Notas</span>
         </div>
-        <div style="background:#fffbeb;border:1.5px solid #fde68a;border-top:none;border-radius:0 0 8px 8px;padding:12px;font-size:13px">${o.notas}</div>
+        <div style="background:#fffbeb;border:1.5px solid #fde68a;border-top:none;border-radius:0 0 8px 8px;padding:12px;font-size:13px">${esc(o.notas)}</div>
       </div>` : ''}
 
       <!-- Pie de página impresión -->
@@ -2875,14 +2913,14 @@ function _renderVehiculosPanel(context, vehs, q) {
     panel.innerHTML = `<div style="padding:10px;color:#6b7280;font-size:13px;text-align:center">Sin coincidencias — intenta con placa, unidad o últimos 4 del VIN</div>`;
   } else {
     panel.innerHTML = filtered.map(v => {
-      const vin4 = v.vin ? String(v.vin).slice(-4) : '';
+      const vin4 = v.vin ? esc(String(v.vin).slice(-4)) : '';
       const tags = [
-        v.placa        ? `<span class="vtag">${icon('tag',10)} ${v.placa}</span>`       : '',
+        v.placa        ? `<span class="vtag">${icon('tag',10)} ${esc(v.placa)}</span>`       : '',
         vin4           ? `<span class="vtag">VIN ···${vin4}</span>`       : '',
-        v.numeroUnidad ? `<span class="vtag">${icon('package',10)} ${v.numeroUnidad}</span>` : '',
+        v.numeroUnidad ? `<span class="vtag">${icon('package',10)} ${esc(v.numeroUnidad)}</span>` : '',
       ].filter(Boolean).join('');
       return `<div class="vehiculo-opt" onmousedown="selectVehiculoCard('${context}','${v.id}')">
-        <div class="vehiculo-opt-title">${v.marca} ${v.modelo}${v.anio ? ' ' + v.anio : ''}</div>
+        <div class="vehiculo-opt-title">${esc(v.marca)} ${esc(v.modelo)}${v.anio ? ' ' + esc(String(v.anio)) : ''}</div>
         ${tags ? `<div style="display:flex;gap:4px;margin-top:3px;flex-wrap:wrap">${tags}</div>` : ''}
       </div>`;
     }).join('');
@@ -3092,9 +3130,9 @@ function renderRefaccionesTable() {
   currentOrdenLineas.forEach((linea, idx) => {
     const dataListId    = `ref-list-${idx}`;
     const skuListId     = `ref-sku-list-${idx}`;
-    const safeName = (linea.nombre || '').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    const safeSku  = (linea.sku   || '').replace(/"/g,'&quot;');
-    const cat = linea.categoria ? `<div id="ref-cat-${idx}" style="font-size:10px;color:var(--muted);margin-top:2px">${linea.categoria}</div>` : `<div id="ref-cat-${idx}"></div>`;
+    const safeName = esc(linea.nombre || '');
+    const safeSku  = esc(linea.sku   || '');
+    const cat = linea.categoria ? `<div id="ref-cat-${idx}" style="font-size:10px;color:var(--muted);margin-top:2px">${esc(linea.categoria)}</div>` : `<div id="ref-cat-${idx}"></div>`;
 
     html += `<tr>
       <td>
@@ -3155,7 +3193,7 @@ function lookupRefaccionBySku(idx) {
       .filter(r => r.sku && String(r.sku).toLowerCase().startsWith(skuVal.toLowerCase()))
       .slice(0, 20);
     skuList.innerHTML = matches
-      .map(r => `<option value="${String(r.sku)}">${r.nombre}</option>`)
+      .map(r => `<option value="${esc(r.sku)}">${esc(r.nombre)}</option>`)
       .join('');
   }
 
@@ -3210,7 +3248,7 @@ function filterRefacciones(idx, datalistId) {
 
   // Actualizar datalist con las opciones filtradas
   datalist.innerHTML = filtered
-    .map(r => `<option value="${r.nombre}"></option>`)
+    .map(r => `<option value="${esc(r.nombre)}"></option>`)
     .join('');
 }
 
@@ -3358,7 +3396,7 @@ function renderInventario() {
     (r.sku    && String(r.sku).toLowerCase().includes(q))
   );
   document.getElementById('tbody-inventario').innerHTML = rows.length
-    ? rows.map(r=>`<tr><td><code>${r.sku}</code></td><td>${r.nombre}</td><td>${r.stock||'—'}</td><td>${r.minimo||'—'}</td><td>${fmt(r.precio)}</td><td><button class="btn btn-primary btn-sm btn-icon" onclick="editRefaccion('${r.id}')">${icon('edit')}</button> <button class="btn btn-danger btn-sm btn-icon" onclick="deleteRefaccion('${r.id}')">${icon('trash')}</button></td></tr>`).join('')
+    ? rows.map(r=>`<tr><td><code>${esc(r.sku)}</code></td><td>${esc(r.nombre)}</td><td>${r.stock||'—'}</td><td>${r.minimo||'—'}</td><td>${fmt(r.precio)}</td><td><button class="btn btn-primary btn-sm btn-icon" onclick="editRefaccion('${r.id}')">${icon('edit')}</button> <button class="btn btn-danger btn-sm btn-icon" onclick="deleteRefaccion('${r.id}')">${icon('trash')}</button></td></tr>`).join('')
     : `<tr><td colspan="7" class="empty-state">Sin refacciones. Importa un archivo Excel.</td></tr>`;
 }
 
@@ -3692,10 +3730,10 @@ function renderCotizacionRefaccionesTable() {
   currentCotizacionLineas.forEach((linea, idx) => {
     const dlId  = `cot-ref-list-${idx}`;
     const skuId = `cot-ref-sku-list-${idx}`;
-    const sName = (linea.nombre||'').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    const sSku  = (linea.sku||'').replace(/"/g,'&quot;');
+    const sName = esc(linea.nombre||'');
+    const sSku  = esc(linea.sku||'');
     const cat   = linea.categoria
-      ? `<div id="cot-ref-cat-${idx}" style="font-size:10px;color:var(--muted);margin-top:2px">${linea.categoria}</div>`
+      ? `<div id="cot-ref-cat-${idx}" style="font-size:10px;color:var(--muted);margin-top:2px">${esc(linea.categoria)}</div>`
       : `<div id="cot-ref-cat-${idx}"></div>`;
     html += `<tr>
       <td><input type="text" id="cot-ref-sku-${idx}" value="${sSku}" list="${skuId}"
@@ -3733,7 +3771,7 @@ function lookupCotizacionRefaccionBySku(idx) {
   const val    = skuEl.value.trim();
   if (!val) { skuEl.style.borderColor = ''; skuEl.style.background = ''; if (skuLst) skuLst.innerHTML = ''; return; }
   const refs = DB.refacciones();
-  if (skuLst) skuLst.innerHTML = refs.filter(r => r.sku && String(r.sku).toLowerCase().startsWith(val.toLowerCase())).slice(0,20).map(r=>`<option value="${String(r.sku)}">${r.nombre}</option>`).join('');
+  if (skuLst) skuLst.innerHTML = refs.filter(r => r.sku && String(r.sku).toLowerCase().startsWith(val.toLowerCase())).slice(0,20).map(r=>`<option value="${esc(r.sku)}">${esc(r.nombre)}</option>`).join('');
   const ref = refs.find(r => r.sku && String(r.sku).toLowerCase() === val.toLowerCase());
   if (ref) {
     const l = currentCotizacionLineas[idx];
@@ -3848,11 +3886,11 @@ function viewCotizacion(id) {
   const folioNum  = c.id.slice(-4).toUpperCase();
 
   const vehHtml = vObj ? (() => {
-    const mma = [vObj.marca, vObj.modelo, vObj.anio].filter(Boolean).join(' ');
+    const mma = esc([vObj.marca, vObj.modelo, vObj.anio].filter(Boolean).join(' '));
     return `<div style="margin-bottom:4px"><strong style="font-size:14px">${mma||'—'}</strong></div>
-      ${vObj.numeroUnidad ? `<div style="margin-bottom:3px"><span style="color:#6b7280;font-size:12px">Núm. Unidad:</span> <strong>${vObj.numeroUnidad}</strong></div>` : ''}
-      ${vObj.placa        ? `<div style="margin-bottom:3px"><span style="color:#6b7280;font-size:12px">Placa:</span> ${vObj.placa}</div>` : ''}
-      ${vObj.vin          ? `<div><span style="color:#6b7280;font-size:12px">VIN:</span> <span style="font-family:monospace;font-size:11px;color:#374151">${vObj.vin}</span></div>` : ''}`;
+      ${vObj.numeroUnidad ? `<div style="margin-bottom:3px"><span style="color:#6b7280;font-size:12px">Núm. Unidad:</span> <strong>${esc(vObj.numeroUnidad)}</strong></div>` : ''}
+      ${vObj.placa        ? `<div style="margin-bottom:3px"><span style="color:#6b7280;font-size:12px">Placa:</span> ${esc(vObj.placa)}</div>` : ''}
+      ${vObj.vin          ? `<div><span style="color:#6b7280;font-size:12px">VIN:</span> <span style="font-family:monospace;font-size:11px;color:#374151">${esc(vObj.vin)}</span></div>` : ''}`;
   })() : '<span style="color:#9ca3af">—</span>';
 
   const lineasHtml = (c.lineas && c.lineas.length)
@@ -3865,8 +3903,8 @@ function viewCotizacion(id) {
           <th style="padding:9px 10px;text-align:right;color:#fff;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Subtotal</th>
         </tr></thead>
         <tbody>${c.lineas.map((l,li) => `<tr style="background:${li%2===0?'#fff':'#f8fafc'}">
-          <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;color:#6b7280;font-family:monospace;font-size:12px">${l.sku||'—'}</td>
-          <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">${l.nombre||'—'}</td>
+          <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;color:#6b7280;font-family:monospace;font-size:12px">${esc(l.sku)||'—'}</td>
+          <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">${esc(l.nombre)||'—'}</td>
           <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:center">${l.cantidad}</td>
           <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right">${fmt(l.precioUnitario)}</td>
           <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:600">${fmt(l.subtotal)}</td>
@@ -3933,7 +3971,7 @@ function viewCotizacion(id) {
 
       ${c.notas ? `<div style="margin-bottom:14px">
         ${secLabel('Notas')}
-        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;font-size:13px">${c.notas}</div>
+        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;font-size:13px">${esc(c.notas)}</div>
       </div>` : ''}
 
       <div class="print-header" style="display:none;margin-top:24px;padding-top:12px;border-top:1px solid #e5e7eb;text-align:center;font-size:11px;color:#9ca3af">
@@ -4005,7 +4043,68 @@ document.addEventListener('keydown', e => {
   }
 });
 
-initApp().then(initRealtime);
+/* ═══════════════════════════════════════════════════════════════ AUTENTICACION
+   El login solo controla que la interfaz muestre u oculte la app: el candado real
+   esta en Supabase (politicas RLS restringidas al rol "authenticated"). Sin sesion
+   valida, sb.from(...) no devuelve ni acepta datos aunque alguien se salte esta
+   pantalla a mano. */
+let _appBooted = false;
+
+function showLogin() {
+  document.getElementById('app-shell').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-email').focus();
+}
+
+function hideLogin() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-shell').style.display = 'block';
+}
+
+async function handleLogin(evt) {
+  evt.preventDefault();
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const btn = document.getElementById('login-submit');
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'Entrando…';
+
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+
+  if (error) {
+    btn.disabled = false;
+    btn.textContent = 'Iniciar sesión';
+    errEl.textContent = error.message === 'Invalid login credentials'
+      ? 'Correo o contraseña incorrectos.'
+      : `No se pudo iniciar sesión: ${error.message}`;
+    errEl.style.display = 'block';
+  }
+  // Si no hay error, onAuthStateChange se encarga de mostrar la app.
+  return false;
+}
+
+async function logout() {
+  await sb.auth.signOut();
+  location.reload(); // limpia por completo cualquier dato en memoria/DOM
+}
+
+sb.auth.onAuthStateChange((event, session) => {
+  if (session) {
+    const emailLabel = document.getElementById('user-email-label');
+    if (emailLabel) { emailLabel.textContent = session.user.email; emailLabel.style.display = 'inline'; }
+    if (!_appBooted) {
+      _appBooted = true;
+      hideLogin();
+      document.getElementById('loading-screen').style.display = 'flex';
+      initApp().then(initRealtime);
+    }
+  } else {
+    document.getElementById('loading-screen').style.display = 'none';
+    showLogin();
+  }
+});
 </script>
 </body>
 </html>

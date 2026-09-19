@@ -1,0 +1,13 @@
+# Secretos y credenciales — nunca deben subirse a este repo publico
+.env
+.env.*
+*.key
+*.pem
+*credentials*
+service-role*
+service_role*
+
+# Dependencias / temporales
+node_modules/
+.DS_Store
+Thumbs.db
