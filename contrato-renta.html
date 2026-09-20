@@ -488,7 +488,7 @@ async function enviarFirma() {
 
     _progreso('Guardando tu firma…');
     const firmaDataUrl = canvas.toDataURL('image/png');
-    const firmaBlob = await (await fetch(firmaDataUrl)).blob();
+    const firmaBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
     const pathFirma = await _subirArchivo(firmaBlob, `${TOKEN}/firma-arrendatario.png`);
 
     _progreso('Generando el documento del contrato…');
