@@ -573,7 +573,7 @@
         </div>
       </div>
       <div class="table-wrap">
-        <table><thead><tr><th>Tipo</th><th class="hide-mobile">Marca/Modelo/Año</th><th class="hide-mobile">Placas</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <table><thead><tr><th>Tipo</th><th class="hide-mobile">Marca/Modelo/Año</th><th class="hide-mobile">Placas</th><th>Estado</th><th class="hide-mobile">Vigencia</th><th>Acciones</th></tr></thead>
           <tbody id="tbody-remolques"></tbody></table>
       </div>
     </section>
@@ -1725,7 +1725,7 @@ const PAGE_TITLES = { dashboard: 'Dashboard', clientes: 'Clientes', vehiculos: '
 const STATUS_LABELS   = { recibido: ['badge-gray', 'Recibido'], en_proceso: ['badge-red', 'En Proceso'], completado: ['badge-green', 'Completado'] };
 const PRIORITY_LABELS = { normal: ['badge-gray', 'Normal'], alta: ['badge-yellow', '⚡ Alta'], urgente: ['badge-red', '🔴 Urgente'] };
 const RENTA_ESTADO_LABELS = { pendiente_firma: ['badge-yellow', 'Pendiente de firma'], activo: ['badge-blue', 'Activo'], completado: ['badge-green', 'Completado'], cancelado: ['badge-gray', 'Cancelado'] };
-const REMOLQUE_ESTADO_LABELS = { disponible: ['badge-green', 'Disponible'], rentado: ['badge-red', 'Rentado'], mantenimiento: ['badge-yellow', 'Mantenimiento'] };
+const REMOLQUE_ESTADO_LABELS = { disponible: ['badge-green', 'Disponible'], no_disponible: ['badge-red', 'No Disponible'], separado: ['badge-blue', 'Separado'], rentado: ['badge-red', 'Rentado'], mantenimiento: ['badge-yellow', 'Mantenimiento'] };
 
 function navigate(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -4264,19 +4264,49 @@ function viewCotizacion(id) {
 }
 
 /* ═══════════════════════════════════════════════════════════════ REMOLQUES */
+function _hoyLocalStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+/* Determina la disponibilidad real de un remolque a partir de sus contratos
+   YA FIRMADOS (estado 'activo'), no de un campo manual: si hay un contrato
+   firmado cuyo periodo cubre hoy, esta "No Disponible"; si el contrato es
+   para una fecha futura (lo firmaron dias antes de la renta), esta
+   "Separado"; si no hay ningun contrato firmado vigente, esta "Disponible". */
+function estadoRemolqueComputado(remolqueId) {
+  const hoy = _hoyLocalStr();
+  const activas = DB.rentas().filter(r => r.remolqueId === remolqueId && r.estado === 'activo');
+  const enCurso = activas.find(r => r.fechaInicio && r.fechaInicio <= hoy && hoy <= (r.fechaFin || r.fechaInicio));
+  if (enCurso) return { key: 'no_disponible', renta: enCurso };
+  const futuras = activas.filter(r => r.fechaInicio && r.fechaInicio > hoy).sort((a, b) => a.fechaInicio.localeCompare(b.fechaInicio));
+  if (futuras.length) return { key: 'separado', renta: futuras[0] };
+  return { key: 'disponible', renta: null };
+}
+
 function renderRemolques() {
   const q = (document.getElementById('search-remolques')?.value || '').toLowerCase();
   let rows = DB.remolques();
   if (q) rows = rows.filter(m => (m.tipo||'').toLowerCase().includes(q) || (m.placas||'').toLowerCase().includes(q) || (m.marcaModeloAnio||'').toLowerCase().includes(q));
   document.getElementById('tbody-remolques').innerHTML = rows.length
-    ? rows.map(m => `<tr>
+    ? rows.map(m => {
+        const comp = m.estado === 'mantenimiento' ? { key: 'mantenimiento', renta: null } : estadoRemolqueComputado(m.id);
+        let vigencia = '—';
+        if (comp.key === 'no_disponible' && comp.renta) {
+          vigencia = `Entregado: ${fmtDate(comp.renta.fechaInicio)} · Regresa: ${fmtDate(comp.renta.fechaFin)}`;
+        } else if (comp.key === 'separado' && comp.renta) {
+          vigencia = `Separado para: ${fmtDate(comp.renta.fechaInicio)} — ${getClienteName(comp.renta.clienteId)}`;
+        }
+        return `<tr>
         <td><strong>${esc(m.tipo)}</strong></td>
         <td class="hide-mobile">${esc(m.marcaModeloAnio)||'—'}</td>
         <td class="hide-mobile">${esc(m.placas)||'—'}</td>
-        <td>${badge(REMOLQUE_ESTADO_LABELS, m.estado||'disponible')}</td>
+        <td>${badge(REMOLQUE_ESTADO_LABELS, comp.key)}</td>
+        <td class="hide-mobile" style="font-size:12px">${vigencia}</td>
         <td><button class="btn btn-outline btn-sm btn-icon" onclick="editRemolque('${m.id}')">${icon('edit')}</button><button class="btn btn-danger btn-sm btn-icon" onclick="deleteRemolque('${m.id}')">${icon('trash')}</button></td>
-      </tr>`).join('')
-    : `<tr><td colspan="5" class="empty-state">Sin remolques registrados</td></tr>`;
+      </tr>`;
+      }).join('')
+    : `<tr><td colspan="6" class="empty-state">Sin remolques registrados</td></tr>`;
 }
 
 function openNewRemolqueModal() {
@@ -4437,7 +4467,10 @@ function openNewRentaModal() {
   populateClienteSelect('renta-cliente', '');
   const sel = document.getElementById('renta-remolque');
   sel.innerHTML = DB.remolques().length
-    ? DB.remolques().map(m => `<option value="${m.id}">${esc(m.tipo)}${m.marcaModeloAnio ? ' — ' + esc(m.marcaModeloAnio) : ''} (${(REMOLQUE_ESTADO_LABELS[m.estado||'disponible']||[])[1]||m.estado})</option>`).join('')
+    ? DB.remolques().map(m => {
+        const comp = m.estado === 'mantenimiento' ? { key: 'mantenimiento' } : estadoRemolqueComputado(m.id);
+        return `<option value="${m.id}">${esc(m.tipo)}${m.marcaModeloAnio ? ' — ' + esc(m.marcaModeloAnio) : ''} (${(REMOLQUE_ESTADO_LABELS[comp.key]||[])[1]||comp.key})</option>`;
+      }).join('')
     : '<option value="">— Registra un remolque primero —</option>';
   const hoy = new Date().toISOString().slice(0,10);
   document.getElementById('renta-fecha-inicio').value = hoy;
