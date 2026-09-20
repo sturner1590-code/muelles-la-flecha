@@ -49,6 +49,20 @@
     .file-input-wrap input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
     .file-input-label { font-size: 12.5px; font-weight: 600; color: var(--text); }
     .file-input-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .doc-upload { border: 1.5px solid var(--border-strong); border-radius: var(--radius); padding: 14px; text-align: center; }
+    .doc-upload.has-file { border-color: #17a768; background: #e3f9ee; }
+    .doc-upload-row { display: flex; gap: 8px; margin-bottom: 10px; }
+    .doc-upload-row .btn { flex: 1; font-size: 12px; padding: 9px 6px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .btn-camera { background: var(--secondary); color: #fff; border: none; }
+    .camera-overlay { position: fixed; inset: 0; background: #000; z-index: 9999; display: none; flex-direction: column; }
+    .camera-topbar { color: #fff; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 600; background: rgba(0,0,0,.45); text-align: left; }
+    .camera-close { background: transparent; border: none; color: #fff; font-size: 22px; cursor: pointer; line-height: 1; padding: 2px 8px; }
+    .camera-viewport { position: relative; flex: 1; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #000; }
+    .camera-viewport video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .camera-guide { position: relative; width: 84%; max-width: 420px; aspect-ratio: 1.586 / 1; border: 3px solid #fff; border-radius: 12px; box-shadow: 0 0 0 2000px rgba(0,0,0,.55); pointer-events: none; }
+    .camera-hint { position: absolute; bottom: 14px; left: 0; right: 0; text-align: center; color: #fff; font-size: 12px; opacity: .85; }
+    .camera-bottombar { display: flex; gap: 10px; padding: 16px; background: rgba(0,0,0,.45); }
+    .camera-bottombar .btn { flex: 1; }
     canvas#firma-canvas { width: 100%; height: 170px; border: 1.5px dashed var(--border-strong); border-radius: var(--radius); touch-action: none; background: #fff; cursor: crosshair; display: block; }
     .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 12px 20px; border-radius: var(--radius-pill); border: none; font: inherit; font-weight: 700; cursor: pointer; font-size: 14px; }
     .btn-primary { background: var(--primary); color: #fff; box-shadow: 0 6px 16px rgba(238,28,37,.28); }
@@ -114,17 +128,31 @@
       <h1 style="text-align:left">Documentos requeridos</h1>
       <div class="form-group">
         <label>INE — lado frontal *</label>
-        <div class="file-input-wrap" id="wrap-ine-frente">
-          <input type="file" id="f-ine-frente" accept="image/*,application/pdf" onchange="_onFileChange('f-ine-frente','wrap-ine-frente')">
-          <div class="file-input-label" id="label-ine-frente">Tomar foto o subir archivo</div>
+        <div class="doc-upload" id="wrap-ine-frente">
+          <div class="doc-upload-row">
+            <button type="button" class="btn btn-camera" onclick="_abrirCamaraGuiada('f-ine-frente','wrap-ine-frente','frente')">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+              Tomar foto con guía
+            </button>
+            <button type="button" class="btn btn-outline" onclick="document.getElementById('f-ine-frente').click()">Subir archivo</button>
+          </div>
+          <input type="file" id="f-ine-frente" accept="image/*,application/pdf" style="display:none" onchange="_onFileChange('f-ine-frente','wrap-ine-frente')">
+          <div class="file-input-label" id="label-ine-frente">Ningún archivo seleccionado</div>
           <div class="file-input-sub">JPG, PNG o PDF</div>
         </div>
       </div>
       <div class="form-group">
         <label>INE — lado posterior *</label>
-        <div class="file-input-wrap" id="wrap-ine-reverso">
-          <input type="file" id="f-ine-reverso" accept="image/*,application/pdf" onchange="_onFileChange('f-ine-reverso','wrap-ine-reverso')">
-          <div class="file-input-label" id="label-ine-reverso">Tomar foto o subir archivo</div>
+        <div class="doc-upload" id="wrap-ine-reverso">
+          <div class="doc-upload-row">
+            <button type="button" class="btn btn-camera" onclick="_abrirCamaraGuiada('f-ine-reverso','wrap-ine-reverso','reverso')">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+              Tomar foto con guía
+            </button>
+            <button type="button" class="btn btn-outline" onclick="document.getElementById('f-ine-reverso').click()">Subir archivo</button>
+          </div>
+          <input type="file" id="f-ine-reverso" accept="image/*,application/pdf" style="display:none" onchange="_onFileChange('f-ine-reverso','wrap-ine-reverso')">
+          <div class="file-input-label" id="label-ine-reverso">Ningún archivo seleccionado</div>
           <div class="file-input-sub">JPG, PNG o PDF</div>
         </div>
       </div>
@@ -157,6 +185,23 @@
     </div>
   </div>
 </div>
+
+<div id="camera-overlay" class="camera-overlay">
+  <div class="camera-topbar">
+    <span id="camera-titulo">Coloca tu INE dentro del recuadro</span>
+    <button type="button" class="camera-close" onclick="_cerrarCamaraGuiada()" aria-label="Cerrar">✕</button>
+  </div>
+  <div class="camera-viewport">
+    <video id="camera-video" autoplay playsinline muted></video>
+    <div class="camera-guide"></div>
+    <div class="camera-hint">Encuadra la credencial dentro del recuadro y evita reflejos</div>
+  </div>
+  <div class="camera-bottombar">
+    <button type="button" class="btn btn-outline" onclick="_cerrarCamaraGuiada()">Cancelar</button>
+    <button type="button" class="btn btn-primary" onclick="_capturarFotoGuiada()">Capturar</button>
+  </div>
+</div>
+<canvas id="camera-canvas" style="display:none"></canvas>
 
 <script>
 const SUPABASE_URL = 'https://qabnuymelcceeecvpxso.supabase.co';
@@ -275,14 +320,76 @@ function pintarContratoPreview() {
   if (el) el.addEventListener('input', pintarContratoPreview);
 }));
 
-function _onFileChange(inputId, wrapId) {
-  const input = document.getElementById(inputId);
+function _setArchivo(key, wrapId, file) {
   const wrap = document.getElementById(wrapId);
-  const file = input.files[0];
-  if (!file) { wrap.classList.remove('has-file'); return; }
-  ARCHIVOS[inputId] = file;
+  if (!file) { ARCHIVOS[key] = null; wrap.classList.remove('has-file'); return; }
+  ARCHIVOS[key] = file;
   wrap.classList.add('has-file');
   wrap.querySelector('.file-input-label').textContent = '✓ ' + file.name;
+}
+function _onFileChange(inputId, wrapId) {
+  const input = document.getElementById(inputId);
+  _setArchivo(inputId, wrapId, input.files[0]);
+}
+
+/* ── Cámara guiada para INE (recuadro tipo credencial para forzar buen encuadre/enfoque) ── */
+let _camaraStream = null, _camaraKey = null, _camaraWrapId = null;
+
+async function _abrirCamaraGuiada(key, wrapId, lado) {
+  _camaraKey = key; _camaraWrapId = wrapId;
+  document.getElementById('camera-titulo').textContent =
+    'Coloca el ' + (lado === 'frente' ? 'FRENTE' : 'REVERSO') + ' de tu INE dentro del recuadro';
+  try {
+    _camaraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      audio: false,
+    });
+    const video = document.getElementById('camera-video');
+    video.srcObject = _camaraStream;
+    document.getElementById('camera-overlay').style.display = 'flex';
+  } catch (e) {
+    console.warn('No se pudo abrir la cámara guiada:', e);
+    alert('No se pudo acceder a la cámara. Usa el botón "Subir archivo" para tomar la foto o elegirla desde tu galería.');
+  }
+}
+
+function _cerrarCamaraGuiada() {
+  document.getElementById('camera-overlay').style.display = 'none';
+  if (_camaraStream) { _camaraStream.getTracks().forEach(t => t.stop()); _camaraStream = null; }
+}
+
+function _capturarFotoGuiada() {
+  const video = document.getElementById('camera-video');
+  const guide = document.querySelector('.camera-guide');
+  const naturalW = video.videoWidth, naturalH = video.videoHeight;
+  if (!naturalW || !naturalH) { alert('La cámara aún no está lista, espera un segundo e intenta de nuevo.'); return; }
+
+  const videoRect = video.getBoundingClientRect();
+  const guideRect = guide.getBoundingClientRect();
+
+  // El video usa object-fit:cover: se escala para cubrir el contenedor y se recorta lo que sobra.
+  // Hay que deshacer ese recorte para saber qué región real de la imagen corresponde al recuadro.
+  const scale = Math.max(videoRect.width / naturalW, videoRect.height / naturalH);
+  const offsetX = (naturalW * scale - videoRect.width) / 2;
+  const offsetY = (naturalH * scale - videoRect.height) / 2;
+
+  const sx = ((guideRect.left - videoRect.left) + offsetX) / scale;
+  const sy = ((guideRect.top - videoRect.top) + offsetY) / scale;
+  const sw = guideRect.width / scale;
+  const sh = guideRect.height / scale;
+
+  const canvas = document.getElementById('camera-canvas');
+  canvas.width = Math.round(sw);
+  canvas.height = Math.round(sh);
+  canvas.getContext('2d').drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+
+  canvas.toBlob(blob => {
+    if (!blob) { alert('No se pudo capturar la foto, intenta de nuevo.'); return; }
+    const nombre = (_camaraKey === 'f-ine-frente' ? 'ine-frente' : 'ine-reverso') + '.jpg';
+    const file = new File([blob], nombre, { type: 'image/jpeg' });
+    _setArchivo(_camaraKey, _camaraWrapId, file);
+    _cerrarCamaraGuiada();
+  }, 'image/jpeg', 0.92);
 }
 
 /* ── Firma con el dedo/mouse ── */
