@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' https://qabnuymelcceeecvpxso.supabase.co wss://qabnuymelcceeecvpxso.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>Contrato de Arrendamiento — Muelles y Mofles La Flecha</title>
+  <link rel="apple-touch-icon" href="logo-la-flecha.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.min.js" integrity="sha384-JBR+x8blGwjDRO63aHCGiZMD4VNiTR4ZUGA+N6ZKLf3zNt1fK8IBpcgPaMrxqWBp" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js" integrity="sha384-en/ztfPSRkGfME4KIm05joYXynqzUgbsG5nMrj/xEFAHXkeZfO3yMK8QQ+mP7p1/" crossorigin="anonymous"></script>
+  <style>
+    :root {
+      --primary: #ec1c24; --primary-d: #b8141b; --primary-soft: #fef0ef;
+      --secondary: #213a81; --bg: #f5f6fb; --white: #ffffff;
+      --border: #e8e9f2; --border-strong: #d7d9e6; --text: #1a1c29;
+      --muted: #6b6f85; --radius: 10px; --radius-lg: 16px; --radius-pill: 9999px;
+      --shadow: 0 1px 2px rgba(30,50,100,.06);
+      --shadow-md: 0 10px 24px rgba(30,50,100,.09);
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --font-display: 'Poppins', var(--font-sans);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: var(--font-sans); background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    .wrap { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
+    .header { text-align: center; padding: 18px 0 20px; }
+    .header img { width: 100%; max-width: 190px; }
+    .card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow); margin-bottom: 16px; }
+    h1 { font-family: var(--font-display); font-size: 18px; text-align: center; margin: 0 0 14px; color: var(--text); }
+    h2 { font-family: var(--font-display); font-size: 13px; color: var(--secondary); margin: 16px 0 6px; text-transform: uppercase; letter-spacing: .03em; }
+    p.clause { font-size: 12.5px; color: #333; margin: 0 0 10px; text-align: justify; }
+    p.clause strong { color: var(--text); }
+    .tbl { width: 100%; border-collapse: collapse; font-size: 12px; margin: 10px 0; }
+    .tbl th, .tbl td { border: 1px solid var(--border-strong); padding: 6px 8px; text-align: left; }
+    .tbl th { background: #f3f4f8; font-weight: 600; }
+    .form-group { margin-bottom: 14px; }
+    label { display: block; font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 5px; }
+    .hint { font-size: 11px; color: var(--muted); margin-top: 4px; }
+    .form-control { width: 100%; padding: 10px 12px; border: 1px solid var(--border-strong); border-radius: var(--radius); font: inherit; outline: none; background: var(--white); }
+    .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 480px) { .form-row { grid-template-columns: 1fr; } }
+    .file-input-wrap { border: 1.5px dashed var(--border-strong); border-radius: var(--radius); padding: 14px; text-align: center; cursor: pointer; transition: border-color .15s, background .15s; position: relative; }
+    .file-input-wrap:hover { border-color: var(--primary); background: var(--primary-soft); }
+    .file-input-wrap.has-file { border-color: #17a768; border-style: solid; background: #e3f9ee; }
+    .file-input-wrap input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+    .file-input-label { font-size: 12.5px; font-weight: 600; color: var(--text); }
+    .file-input-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    canvas#firma-canvas { width: 100%; height: 170px; border: 1.5px dashed var(--border-strong); border-radius: var(--radius); touch-action: none; background: #fff; cursor: crosshair; display: block; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 12px 20px; border-radius: var(--radius-pill); border: none; font: inherit; font-weight: 700; cursor: pointer; font-size: 14px; }
+    .btn-primary { background: var(--primary); color: #fff; box-shadow: 0 6px 16px rgba(238,28,37,.28); }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-outline { background: #fff; color: var(--text); border: 1px solid var(--border-strong); padding: 8px 14px; font-size: 12px; font-weight: 600; }
+    .btn-block { width: 100%; }
+    .checkbox-row { display: flex; align-items: flex-start; gap: 10px; font-size: 12.5px; color: var(--text); }
+    .checkbox-row input { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
+    .state-msg { text-align: center; padding: 60px 20px; flex-direction: column; align-items: center; justify-content: center; }
+    .state-msg h2 { text-transform: none; letter-spacing: 0; font-size: 18px; color: var(--text); }
+    .state-msg p { color: var(--muted); font-size: 13px; }
+    .spinner { width: 34px; height: 34px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; margin: 0 auto 16px; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #progreso-envio { display:none; font-size:12px; color:var(--muted); text-align:center; margin-top:10px; }
+  </style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="header"><img src="logo-la-flecha.png" alt="Refaccionaria La Flecha"></div>
+
+  <div id="estado-cargando" class="card state-msg">
+    <div class="spinner"></div>
+    <p>Cargando tu contrato…</p>
+  </div>
+
+  <div id="estado-error" class="card state-msg" style="display:none">
+    <h2>Link no válido</h2>
+    <p id="estado-error-msg">Este link de contrato no existe o ya expiró. Pide a Muelles y Mofles La Flecha que te envíe uno nuevo.</p>
+  </div>
+
+  <div id="estado-firmado" class="card state-msg" style="display:none">
+    <h2>¡Contrato firmado con éxito!</h2>
+    <p>Gracias. Tu contrato quedó registrado. Ya puedes cerrar esta ventana.</p>
+  </div>
+
+  <div id="contrato-contenido" style="display:none">
+    <div class="card" id="contrato-texto"></div>
+
+    <div class="card">
+      <h1 style="text-align:left">Tus datos para firmar</h1>
+      <div class="form-group">
+        <label>Nombre completo (como aparecerá en el contrato) *</label>
+        <input class="form-control" id="f-nombre" required>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Domicilio completo *</label>
+          <input class="form-control" id="f-domicilio" placeholder="Calle, número, colonia, ciudad" required>
+        </div>
+        <div class="form-group">
+          <label>Identificación oficial (tipo y número) *</label>
+          <input class="form-control" id="f-identificacion" placeholder="INE 1234567890123" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Teléfono de contacto *</label>
+        <input class="form-control" id="f-telefono" type="tel" required>
+      </div>
+    </div>
+
+    <div class="card">
+      <h1 style="text-align:left">Documentos requeridos</h1>
+      <div class="form-group">
+        <label>INE — lado frontal *</label>
+        <div class="file-input-wrap" id="wrap-ine-frente">
+          <input type="file" id="f-ine-frente" accept="image/*,application/pdf" capture="environment" onchange="_onFileChange('f-ine-frente','wrap-ine-frente')">
+          <div class="file-input-label" id="label-ine-frente">Tomar foto o subir archivo</div>
+          <div class="file-input-sub">JPG, PNG o PDF</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>INE — lado posterior *</label>
+        <div class="file-input-wrap" id="wrap-ine-reverso">
+          <input type="file" id="f-ine-reverso" accept="image/*,application/pdf" capture="environment" onchange="_onFileChange('f-ine-reverso','wrap-ine-reverso')">
+          <div class="file-input-label" id="label-ine-reverso">Tomar foto o subir archivo</div>
+          <div class="file-input-sub">JPG, PNG o PDF</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Comprobante de domicilio (no mayor a 3 meses) *</label>
+        <div class="file-input-wrap" id="wrap-comprobante">
+          <input type="file" id="f-comprobante" accept="image/*,application/pdf" capture="environment" onchange="_onFileChange('f-comprobante','wrap-comprobante')">
+          <div class="file-input-label" id="label-comprobante">Tomar foto o subir archivo</div>
+          <div class="file-input-sub">JPG, PNG o PDF</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h1 style="text-align:left">Tu firma</h1>
+      <p class="hint" style="margin-bottom:8px">Dibuja tu firma con el dedo o el mouse.</p>
+      <canvas id="firma-canvas" width="580" height="220"></canvas>
+      <div style="margin-top:8px"><button type="button" class="btn btn-outline" onclick="_limpiarFirma()">Borrar y volver a firmar</button></div>
+    </div>
+
+    <div class="card">
+      <label class="checkbox-row">
+        <input type="checkbox" id="f-acepto">
+        <span>He leído y entendido el contenido de este contrato y estoy de acuerdo con sus términos.</span>
+      </label>
+      <div style="margin-top:16px">
+        <button class="btn btn-primary btn-block" id="btn-enviar" onclick="enviarFirma()">Firmar y enviar contrato</button>
+        <div id="progreso-envio"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://qabnuymelcceeecvpxso.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYm51eW1lbGNjZWVlY3ZweHNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NDYyODcsImV4cCI6MjA5MjIyMjI4N30.mqPgPSVc8zijGapjmPSwJeJjwYPAk0gg7s2_JdKQ4N8';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const ARRENDADOR_NOMBRE = 'Eduardo Turner López';
+const ARRENDADOR_FIRMA_URL = sb.storage.from('rentas-publico').getPublicUrl('firma-arrendador.png').data.publicUrl;
+
+const params = new URLSearchParams(location.search);
+const TOKEN = params.get('token');
+let CONTRATO = null;
+const ARCHIVOS = {}; // f-ine-frente, f-ine-reverso, f-comprobante -> File
+
+function esc(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+function fmtMoney(n) { return '$' + Number(n||0).toLocaleString('es-MX', {minimumFractionDigits:2}); }
+function fmtFechaLarga(iso) {
+  if (!iso) return '—';
+  const [y,m,d] = iso.split('-');
+  return new Date(Date.UTC(+y, +m-1, +d)).toLocaleDateString('es-MX', {day:'numeric', month:'long', year:'numeric', timeZone:'UTC'});
+}
+
+function mostrarEstado(id) {
+  ['estado-cargando','estado-error','estado-firmado','contrato-contenido'].forEach(x => {
+    document.getElementById(x).style.display = x === id ? (x === 'contrato-contenido' ? 'block' : 'flex') : 'none';
+  });
+}
+
+/* Devuelve el arreglo de clausulas del contrato con los datos ya combinados.
+   Se usa tanto para pintar el texto en pantalla como para generar el PDF,
+   asi ambos salen siempre identicos. */
+function construirClausulas(d) {
+  return [
+    { t: 'titulo', v: 'CONTRATO DE ARRENDAMIENTO DE BIEN MUEBLE (REMOLQUE)' },
+    { t: 'parrafo', v: `Monclova, Coahuila, México — Fecha: ${fmtFechaLarga(d.fechaContrato)}` },
+    { t: 'parrafo', v: `Celebran el presente contrato, por una parte ${ARRENDADOR_NOMBRE} ("EL ARRENDADOR"), en su carácter de único propietario del bien mueble descrito; y por la otra parte ${d.nombre}, con domicilio en ${d.domicilio}, identificación oficial ${d.identificacion} y teléfono ${d.telefono} ("EL ARRENDATARIO"). Ambas partes declaran tener capacidad legal y se obligan libremente conforme a las siguientes cláusulas.` },
+    { t: 'clausula', v: `PRIMERA. OBJETO Y PROPIEDAD. EL ARRENDADOR otorga en arrendamiento a EL ARRENDATARIO el bien mueble (el "Remolque"): tipo ${d.remolqueTipo||'—'}, capacidad de carga ${d.remolqueCapacidad||'—'} kg, marca/modelo/año ${d.remolqueMarcaModeloAnio||'—'}, número de serie ${d.remolqueSerie||'—'}, placas ${d.remolquePlacas||'—'}, color ${d.remolqueColor||'—'}, medidas ${d.remolqueMedidas||'—'}. EL ARRENDADOR conserva en todo momento la propiedad del Remolque; este contrato es exclusivamente de uso temporal y NO transmite dominio, posesión definitiva ni opción de compra alguna. EL ARRENDATARIO reconoce expresamente que el Remolque es propiedad de EL ARRENDADOR.` },
+    { t: 'clausula', v: `SEGUNDA. ESTADO DEL BIEN. EL ARRENDATARIO declara recibir el Remolque en buen estado de funcionamiento, según la columna "Al entregar", y se obliga a devolverlo en las mismas condiciones, salvo el desgaste normal por uso adecuado. La columna "Al recibir" se llenará al momento de la devolución:` },
+    { t: 'tabla-entrega' },
+    { t: 'clausula', v: `TERCERA. PLAZO Y DEVOLUCIÓN. El arrendamiento inicia el ${fmtFechaLarga(d.fechaInicio)} y concluye el ${fmtFechaLarga(d.fechaFin)} a las ${d.horaFin||'—'} hrs., momento en que el Remolque deberá devolverse en ${d.lugarEntrega||'—'}. El retraso en la devolución causará una pena convencional de ${fmtMoney(d.penalizacionDiaria)} por cada día o fracción, sin perjuicio de las demás acciones que correspondan a EL ARRENDADOR.` },
+    { t: 'clausula', v: `CUARTA. RENTA Y DEPÓSITO. La renta pactada es de ${fmtMoney(d.montoRenta)} (${d.montoRentaLetra}), pagadera por adelantado. EL ARRENDATARIO entrega un depósito en garantía de ${fmtMoney(d.montoDeposito)}, que EL ARRENDADOR podrá aplicar a retrasos, daños, faltantes, multas o cualquier adeudo derivado de este contrato; el remanente, de existir, se devolverá al término del arrendamiento previa verificación del Remolque.` },
+    { t: 'clausula', v: `QUINTA. GARANTÍA (PAGARÉ). Como garantía del cumplimiento, EL ARRENDATARIO suscribe a favor de EL ARRENDADOR un pagaré único por la cantidad de ${fmtMoney(d.montoPagare)} (${d.montoPagareLetra}), que se hará efectivo en caso de destrucción, siniestro, robo, pérdida, menoscabo o cualquier daño del Remolque, así como por falta de pago o incumplimiento. De no actualizarse ninguno de estos supuestos, el pagaré será devuelto al concluir el arrendamiento y verificado el buen estado del Remolque.` },
+    { t: 'clausula', v: `SEXTA. USO Y OBLIGACIONES DEL ARRENDATARIO. El Remolque se destinará únicamente a ${d.usoConvenido||'uso general de carga'}, sin exceder su capacidad. EL ARRENDATARIO se obliga a: (a) usarlo con diligencia y conforme a la ley; (b) NO subarrendarlo, prestarlo, ceder ni gravar los derechos de este contrato; (c) NO modificarlo ni repararlo sin autorización escrita de EL ARRENDADOR; (d) cubrir combustible, casetas, maniobras y mantenimiento durante la vigencia; (e) contar con los permisos, licencias y seguros necesarios para su circulación y carga.` },
+    { t: 'clausula', v: `SÉPTIMA. RIESGO Y RESPONSABILIDAD. Desde la entrega y hasta la devolución, EL ARRENDATARIO asume TODO riesgo sobre el Remolque y responde de manera EXCLUSIVA por daños, pérdida, robo, accidentes, así como por daños a terceros, a la carga transportada, a personas o bienes, y por las consecuencias penales, fiscales, civiles o administrativas derivadas de su uso. EL ARRENDADOR NO será responsable por dichos hechos ni por los bienes o valores propiedad de EL ARRENDATARIO o de terceros transportados en el Remolque. El caso fortuito o la fuerza mayor NO liberan a EL ARRENDATARIO de la obligación de devolver el Remolque o de indemnizar su valor conforme a la Cláusula Quinta.` },
+    { t: 'clausula', v: `OCTAVA. RESCISIÓN Y RECUPERACIÓN. EL ARRENDADOR podrá rescindir este contrato y exigir la devolución inmediata del Remolque, sin necesidad de declaración judicial previa, por falta de pago, uso indebido o incumplimiento de cualquier obligación. En tales casos, EL ARRENDATARIO autoriza a EL ARRENDADOR a recuperar el Remolque donde se encuentre, sin que ello genere responsabilidad alguna para EL ARRENDADOR.` },
+    { t: 'clausula', v: `NOVENA. LEGISLACIÓN Y JURISDICCIÓN. Este contrato se rige por los artículos 2918 al 2938 del Código Civil del Estado de Coahuila, supletorio del Código de Comercio vigente. Para su interpretación y cumplimiento, las partes se someten a los tribunales competentes de la ciudad de Monclova, Coahuila, renunciando a cualquier otro fuero que pudiera corresponderles por razón de domicilio presente o futuro.` },
+    { t: 'parrafo', v: 'Leído y entendido su contenido, las partes firman de común acuerdo.' },
+  ];
+}
+
+function pintarContrato(d) {
+  const clausulas = construirClausulas(d);
+  let html = '';
+  clausulas.forEach(c => {
+    if (c.t === 'titulo') html += `<h1>${esc(c.v)}</h1>`;
+    else if (c.t === 'tabla-entrega') {
+      const filas = [
+        ['Tirón / enganche', d.entTiron], ['Gato de elevación', d.entGato],
+        ['Sistema eléctrico y luces', d.entElectrico], ['Llantas', d.entLlantas],
+        ['Muelles y suspensión', d.entMuelles], ['Piso / madera', d.entPiso],
+        ['Estructura (chasis, polveras)', d.entEstructura],
+      ];
+      html += `<table class="tbl"><thead><tr><th>Componente</th><th>Estado al ENTREGAR</th></tr></thead><tbody>` +
+        filas.map(([label, val]) => `<tr><td>${esc(label)}</td><td>${esc(val)||'—'}</td></tr>`).join('') +
+        `</tbody></table>`;
+    } else {
+      html += `<p class="clause">${esc(c.v)}</p>`;
+    }
+  });
+  document.getElementById('contrato-texto').innerHTML = html;
+}
+
+async function cargarContrato() {
+  if (!TOKEN) { mostrarEstado('estado-error'); return; }
+  try {
+    const { data, error } = await sb.rpc('get_contrato_por_token', { p_token: TOKEN });
+    const row = Array.isArray(data) ? data[0] : data;
+    if (error || !row) { mostrarEstado('estado-error'); return; }
+
+    if (row.estado !== 'pendiente_firma') {
+      document.getElementById('estado-firmado').querySelector('p').textContent =
+        row.estado === 'activo' || row.estado === 'completado'
+          ? 'Este contrato ya fue firmado anteriormente. Si necesitas un cambio, contacta a Muelles y Mofles La Flecha.'
+          : 'Este contrato ya no está disponible.';
+      mostrarEstado('estado-firmado');
+      return;
+    }
+
+    CONTRATO = row;
+    document.getElementById('f-nombre').value = row.clienteNombre && row.clienteNombre !== '—' ? row.clienteNombre : '';
+    document.getElementById('f-telefono').value = row.clienteTelefono || '';
+
+    pintarContratoPreview();
+    _initFirmaCanvas();
+    mostrarEstado('contrato-contenido');
+  } catch (e) {
+    console.error(e);
+    mostrarEstado('estado-error');
+  }
+}
+
+function pintarContratoPreview() {
+  pintarContrato({
+    ...CONTRATO,
+    nombre: document.getElementById('f-nombre').value || '_______________',
+    domicilio: document.getElementById('f-domicilio')?.value || '_______________',
+    identificacion: document.getElementById('f-identificacion')?.value || '_______________',
+    telefono: document.getElementById('f-telefono')?.value || '_______________',
+  });
+}
+['f-nombre'].forEach(id => document.addEventListener('DOMContentLoaded', () => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', pintarContratoPreview);
+}));
+
+function _onFileChange(inputId, wrapId) {
+  const input = document.getElementById(inputId);
+  const wrap = document.getElementById(wrapId);
+  const file = input.files[0];
+  if (!file) { wrap.classList.remove('has-file'); return; }
+  ARCHIVOS[inputId] = file;
+  wrap.classList.add('has-file');
+  wrap.querySelector('.file-input-label').textContent = '✓ ' + file.name;
+}
+
+/* ── Firma con el dedo/mouse ── */
+function _initFirmaCanvas() {
+  const canvas = document.getElementById('firma-canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.strokeStyle = '#1a1c29';
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  let drawing = false, last = null;
+  function pos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width, scaleY = canvas.height / rect.height;
+    const p = e.touches ? e.touches[0] : e;
+    return { x: (p.clientX - rect.left) * scaleX, y: (p.clientY - rect.top) * scaleY };
+  }
+  function start(e) { drawing = true; canvas._hasSignature = true; last = pos(e); e.preventDefault(); }
+  function move(e) {
+    if (!drawing) return;
+    const p = pos(e);
+    ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+    last = p; e.preventDefault();
+  }
+  function end() { drawing = false; }
+  canvas.addEventListener('mousedown', start);
+  canvas.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', end);
+  canvas.addEventListener('touchstart', start, { passive:false });
+  canvas.addEventListener('touchmove', move, { passive:false });
+  canvas.addEventListener('touchend', end);
+}
+function _limpiarFirma() {
+  const canvas = document.getElementById('firma-canvas');
+  canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
+  canvas._hasSignature = false;
+}
+
+function _progreso(msg) {
+  const el = document.getElementById('progreso-envio');
+  el.style.display = 'block';
+  el.textContent = msg;
+}
+
+async function _subirArchivo(file, path) {
+  const { error } = await sb.storage.from('rentas-docs').upload(path, file, { upsert: true, contentType: file.type || 'application/octet-stream' });
+  if (error) throw new Error('No se pudo subir ' + path + ': ' + error.message);
+  return path;
+}
+
+async function _generarPdf(d) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'letter' });
+  const marginX = 18, maxWidth = 215.9 - marginX*2, pageHeight = 279.4;
+  let y = 20;
+
+  function ensureSpace(h) { if (y + h > pageHeight - 20) { doc.addPage(); y = 20; } }
+  function titulo(text) {
+    doc.setFont('helvetica','bold'); doc.setFontSize(13);
+    const lines = doc.splitTextToSize(text, maxWidth);
+    lines.forEach(l => { ensureSpace(7); doc.text(l, 215.9/2, y, { align:'center' }); y += 6.5; });
+    y += 2;
+    doc.setFont('helvetica','normal'); doc.setFontSize(9.3);
+  }
+  function parrafo(text) {
+    const lines = doc.splitTextToSize(text, maxWidth);
+    lines.forEach(l => { ensureSpace(4.6); doc.text(l, marginX, y); y += 4.5; });
+    y += 2.5;
+  }
+  function tablaEntrega() {
+    const filas = [
+      ['Tirón / enganche', d.entTiron], ['Gato de elevación', d.entGato],
+      ['Sistema eléctrico y luces', d.entElectrico], ['Llantas', d.entLlantas],
+      ['Muelles y suspensión', d.entMuelles], ['Piso / madera', d.entPiso],
+      ['Estructura (chasis, polveras)', d.entEstructura],
+    ];
+    ensureSpace(8 + filas.length*6);
+    doc.setFont('helvetica','bold'); doc.setFontSize(9);
+    doc.text('Componente', marginX, y); doc.text('Estado al ENTREGAR', marginX + 95, y);
+    y += 2; doc.line(marginX, y, marginX+maxWidth, y); y += 4;
+    doc.setFont('helvetica','normal');
+    filas.forEach(([label, val]) => {
+      ensureSpace(6);
+      doc.text(label, marginX, y);
+      doc.text(String(val||'—'), marginX + 95, y);
+      y += 6;
+    });
+    y += 3;
+  }
+
+  titulo('CONTRATO DE ARRENDAMIENTO DE BIEN MUEBLE (REMOLQUE)');
+  construirClausulas(d).forEach(c => {
+    if (c.t === 'titulo') return; // ya se imprimio como titulo()
+    if (c.t === 'tabla-entrega') { tablaEntrega(); return; }
+    parrafo(c.v);
+  });
+
+  // Firmas
+  ensureSpace(55);
+  y += 6;
+  const firmaW = 55, firmaH = 22;
+  try {
+    const resp = await fetch(ARRENDADOR_FIRMA_URL, { cache: 'no-store' });
+    if (resp.ok) {
+      const blob = await resp.blob();
+      const dataUrl = await new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(blob); });
+      doc.addImage(dataUrl, 'PNG', marginX, y, firmaW, firmaH);
+    }
+  } catch (e) { /* si no hay firma del arrendador registrada, se deja el espacio en blanco */ }
+  if (d._firmaArrendatarioDataUrl) {
+    doc.addImage(d._firmaArrendatarioDataUrl, 'PNG', marginX + 100, y, firmaW, firmaH);
+  }
+  y += firmaH + 2;
+  doc.setLineWidth(.2);
+  doc.line(marginX, y, marginX + firmaW, y);
+  doc.line(marginX + 100, y, marginX + 100 + firmaW, y);
+  y += 4;
+  doc.setFontSize(8.5);
+  doc.text('EL ARRENDADOR', marginX, y);
+  doc.text('EL ARRENDATARIO', marginX + 100, y);
+  y += 4;
+  doc.text(ARRENDADOR_NOMBRE, marginX, y);
+  doc.text(d.nombre, marginX + 100, y);
+  y += 5;
+  doc.setFontSize(7.5); doc.setTextColor(120);
+  doc.text('Firma electrónica simple — firmado digitalmente el ' + new Date().toLocaleString('es-MX'), marginX, y);
+
+  return doc.output('blob');
+}
+
+async function enviarFirma() {
+  const nombre = document.getElementById('f-nombre').value.trim();
+  const domicilio = document.getElementById('f-domicilio').value.trim();
+  const identificacion = document.getElementById('f-identificacion').value.trim();
+  const telefono = document.getElementById('f-telefono').value.trim();
+  const canvas = document.getElementById('firma-canvas');
+  const acepto = document.getElementById('f-acepto').checked;
+
+  if (!nombre || !domicilio || !identificacion || !telefono) { alert('Completa todos tus datos.'); return; }
+  if (!ARCHIVOS['f-ine-frente'] || !ARCHIVOS['f-ine-reverso'] || !ARCHIVOS['f-comprobante']) { alert('Sube los 3 documentos requeridos (INE frente, INE reverso, comprobante de domicilio).'); return; }
+  if (!canvas._hasSignature) { alert('Dibuja tu firma antes de continuar.'); return; }
+  if (!acepto) { alert('Debes aceptar los términos del contrato para continuar.'); return; }
+
+  const btn = document.getElementById('btn-enviar');
+  btn.disabled = true;
+
+  try {
+    _progreso('Subiendo INE (frente)…');
+    const extFrente = (ARCHIVOS['f-ine-frente'].name.split('.').pop() || 'jpg');
+    const pathIneFrente = await _subirArchivo(ARCHIVOS['f-ine-frente'], `${TOKEN}/ine-frente.${extFrente}`);
+
+    _progreso('Subiendo INE (reverso)…');
+    const extReverso = (ARCHIVOS['f-ine-reverso'].name.split('.').pop() || 'jpg');
+    const pathIneReverso = await _subirArchivo(ARCHIVOS['f-ine-reverso'], `${TOKEN}/ine-reverso.${extReverso}`);
+
+    _progreso('Subiendo comprobante de domicilio…');
+    const extComp = (ARCHIVOS['f-comprobante'].name.split('.').pop() || 'jpg');
+    const pathComprobante = await _subirArchivo(ARCHIVOS['f-comprobante'], `${TOKEN}/comprobante.${extComp}`);
+
+    _progreso('Guardando tu firma…');
+    const firmaDataUrl = canvas.toDataURL('image/png');
+    const firmaBlob = await (await fetch(firmaDataUrl)).blob();
+    const pathFirma = await _subirArchivo(firmaBlob, `${TOKEN}/firma-arrendatario.png`);
+
+    _progreso('Generando el documento del contrato…');
+    const datosCompletos = { ...CONTRATO, nombre, domicilio, identificacion, telefono, _firmaArrendatarioDataUrl: firmaDataUrl };
+    const pdfBlob = await _generarPdf(datosCompletos);
+    const pathPdf = await _subirArchivo(pdfBlob, `${TOKEN}/contrato-firmado.pdf`);
+
+    _progreso('Enviando tu contrato…');
+    const { data: ok, error: rpcError } = await sb.rpc('firmar_contrato', {
+      p_token: TOKEN, p_nombre: nombre, p_domicilio: domicilio, p_identificacion: identificacion,
+      p_telefono: telefono, p_firma_url: pathFirma, p_ine_frente_url: pathIneFrente,
+      p_ine_reverso_url: pathIneReverso, p_comprobante_url: pathComprobante, p_pdf_url: pathPdf,
+    });
+
+    if (rpcError || !ok) throw new Error(rpcError ? rpcError.message : 'El contrato ya había sido firmado.');
+
+    mostrarEstado('estado-firmado');
+  } catch (e) {
+    console.error(e);
+    alert('Ocurrió un problema al enviar tu contrato: ' + e.message + '\nPor favor intenta de nuevo.');
+    btn.disabled = false;
+    document.getElementById('progreso-envio').style.display = 'none';
+  }
+}
+
+cargarContrato();
+</script>
+</body>
+</html>

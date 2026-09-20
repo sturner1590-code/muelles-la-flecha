@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://qabnuymelcceeecvpxso.supabase.co wss://qabnuymelcceeecvpxso.supabase.co https://vpic.nhtsa.dot.gov; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://qabnuymelcceeecvpxso.supabase.co; connect-src 'self' https://qabnuymelcceeecvpxso.supabase.co wss://qabnuymelcceeecvpxso.supabase.co https://vpic.nhtsa.dot.gov; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>Muelles y Mofles La Flecha</title>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -365,6 +365,12 @@
     <div class="nav-item" data-page="inventario" onclick="navigate('inventario')">
       <span class="nav-icon" data-icon="package"></span><span class="nav-label">Inventario</span>
     </div>
+    <div class="nav-item" data-page="remolques" onclick="navigate('remolques')">
+      <span class="nav-icon" data-icon="truck"></span><span class="nav-label">Remolques</span>
+    </div>
+    <div class="nav-item" data-page="rentas" onclick="navigate('rentas')">
+      <span class="nav-icon" data-icon="key"></span><span class="nav-label">Rentas</span>
+    </div>
     <div class="nav-item" data-page="reportes" onclick="navigate('reportes')">
       <span class="nav-icon" data-icon="trending"></span><span class="nav-label">Reportes</span>
     </div>
@@ -554,6 +560,43 @@
       <div class="table-wrap">
         <table><thead><tr><th>SKU</th><th>Refaccion</th><th>Stock</th><th>Min</th><th>Venta</th><th>Acciones</th></tr></thead>
           <tbody id="tbody-inventario"></tbody></table>
+      </div>
+    </section>
+
+    <!-- REMOLQUES -->
+    <section class="page" id="page-remolques">
+      <div class="section-header">
+        <h3><span data-icon="truck"></span> Remolques</h3>
+        <div class="btn-group">
+          <input type="text" class="search-bar" placeholder="Buscar remolque..." id="search-remolques" oninput="renderRemolques()">
+          <button class="btn btn-primary" onclick="openNewRemolqueModal()">+ Nuevo</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table><thead><tr><th>Tipo</th><th class="hide-mobile">Marca/Modelo/Año</th><th class="hide-mobile">Placas</th><th>Estado</th><th>Acciones</th></tr></thead>
+          <tbody id="tbody-remolques"></tbody></table>
+      </div>
+    </section>
+
+    <!-- RENTAS -->
+    <section class="page" id="page-rentas">
+      <div class="section-header">
+        <h3><span data-icon="key"></span> Rentas de Remolques</h3>
+        <div class="btn-group">
+          <input type="text" class="search-bar" placeholder="Buscar renta..." id="search-rentas" oninput="renderRentas()">
+          <button class="btn btn-outline" onclick="openFirmaArrendadorModal()"><span data-icon="edit"></span> Firma del Arrendador</button>
+          <button class="btn btn-primary" onclick="openNewRentaModal()">+ Nueva Renta</button>
+        </div>
+      </div>
+      <div class="filters" id="renta-filters">
+        <span class="filter-chip active" data-status="all" onclick="setRentaFilter('all')">Todas</span>
+        <span class="filter-chip" data-status="pendiente_firma" onclick="setRentaFilter('pendiente_firma')">Pendiente de firma</span>
+        <span class="filter-chip" data-status="activo" onclick="setRentaFilter('activo')">Activo</span>
+        <span class="filter-chip" data-status="completado" onclick="setRentaFilter('completado')">Completado</span>
+      </div>
+      <div class="table-wrap">
+        <table><thead><tr><th>Cliente</th><th>Remolque</th><th class="hide-mobile">Periodo</th><th>Estado</th><th class="hide-mobile">Monto</th><th>Acciones</th></tr></thead>
+          <tbody id="tbody-rentas"></tbody></table>
       </div>
     </section>
 
@@ -1207,6 +1250,218 @@
   </div>
 </dialog>
 
+<!-- MODAL REMOLQUE -->
+<dialog class="modal-dialog" id="modal-remolque">
+  <div class="modal-header">
+    <h3>Nuevo Remolque</h3>
+    <button class="modal-close" onclick="closeModal('modal-remolque')">✕</button>
+  </div>
+  <div class="modal-body">
+    <input type="hidden" id="remolque-id">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Tipo *</label>
+        <input class="form-control" id="remolque-tipo" placeholder="Cama baja, Ganadero, Caja seca...">
+      </div>
+      <div class="form-group">
+        <label>Capacidad de carga (kg)</label>
+        <input class="form-control" id="remolque-capacidad" placeholder="3000">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Marca / Modelo / Año</label>
+      <input class="form-control" id="remolque-marca-modelo-anio" placeholder="Ej: Sandoval 2022">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Número de serie</label>
+        <input class="form-control" id="remolque-serie" placeholder="Serie / VIN">
+      </div>
+      <div class="form-group">
+        <label>Placas</label>
+        <input class="form-control" id="remolque-placas" placeholder="ABC-123" style="text-transform:uppercase">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Color</label>
+        <input class="form-control" id="remolque-color" placeholder="Blanco">
+      </div>
+      <div class="form-group">
+        <label>Medidas</label>
+        <input class="form-control" id="remolque-medidas" placeholder="6.5 x 2.4 m">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Estado</label>
+      <select class="form-control" id="remolque-estado">
+        <option value="disponible">Disponible</option>
+        <option value="rentado">Rentado</option>
+        <option value="mantenimiento">Mantenimiento</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Notas</label>
+      <textarea class="form-control" id="remolque-notas" rows="2"></textarea>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline" onclick="closeModal('modal-remolque')">Cancelar</button>
+    <button class="btn btn-primary" onclick="saveRemolque()">Guardar</button>
+  </div>
+</dialog>
+
+<!-- MODAL FIRMA DEL ARRENDADOR -->
+<dialog class="modal-dialog" id="modal-firma-arrendador">
+  <div class="modal-header">
+    <h3>Firma del Arrendador</h3>
+    <button class="modal-close" onclick="closeModal('modal-firma-arrendador')">✕</button>
+  </div>
+  <div class="modal-body">
+    <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Esta firma se guarda una sola vez y se estampa automáticamente en cada contrato nuevo como <strong>EL ARRENDADOR (Eduardo Turner López)</strong>. Dibújala con el mouse o el dedo si estás en el celular/tablet.</p>
+    <div id="firma-arrendador-preview" style="display:none;text-align:center;margin-bottom:10px;padding:10px;border:1px solid var(--border);border-radius:var(--radius)">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Firma actual guardada:</div>
+      <img id="firma-arrendador-preview-img" style="max-height:70px" alt="Firma del arrendador">
+    </div>
+    <canvas id="firma-arrendador-canvas" width="460" height="180" style="width:100%;height:180px;border:1.5px dashed var(--border-strong);border-radius:var(--radius);touch-action:none;background:#fff;cursor:crosshair"></canvas>
+    <button class="btn btn-outline btn-sm" style="margin-top:8px" onclick="limpiarFirmaCanvas('firma-arrendador-canvas')"><span data-icon="eraser"></span> Borrar y volver a dibujar</button>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline" onclick="closeModal('modal-firma-arrendador')">Cancelar</button>
+    <button class="btn btn-primary" id="btn-guardar-firma-arrendador" onclick="guardarFirmaArrendador()">Guardar firma</button>
+  </div>
+</dialog>
+
+<!-- MODAL NUEVA RENTA -->
+<dialog class="modal-dialog" id="modal-renta">
+  <div class="modal-header">
+    <h3 id="renta-modal-titulo">Nueva Renta de Remolque</h3>
+    <button class="modal-close" onclick="closeModal('modal-renta')">✕</button>
+  </div>
+  <div class="modal-body">
+    <input type="hidden" id="renta-id">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Cliente / Arrendatario *</label>
+        <div style="display:flex;gap:6px">
+          <div style="flex:1">
+            <input type="text" class="form-control" id="renta-cliente" list="renta-cliente-list" onchange="selectRentaClienteFromDatalist()" placeholder="Buscar cliente...">
+            <datalist id="renta-cliente-list"></datalist>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openInlineRentaClienteForm()">+ Nuevo</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Remolque *</label>
+        <select class="form-control" id="renta-remolque"></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Fecha de inicio *</label>
+        <input type="date" class="form-control" id="renta-fecha-inicio">
+      </div>
+      <div class="form-group">
+        <label>Fecha de devolución *</label>
+        <input type="date" class="form-control" id="renta-fecha-fin">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Hora de devolución</label>
+        <input type="time" class="form-control" id="renta-hora-fin" value="18:00">
+      </div>
+      <div class="form-group">
+        <label>Lugar de entrega/devolución</label>
+        <input class="form-control" id="renta-lugar-entrega" placeholder="Patio Muelles y Mofles La Flecha, Monclova">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Monto de renta ($) *</label>
+        <input type="number" class="form-control" id="renta-monto-renta" min="0" step="0.01" placeholder="1500">
+      </div>
+      <div class="form-group">
+        <label>Depósito en garantía ($)</label>
+        <input type="number" class="form-control" id="renta-monto-deposito" min="0" step="0.01" placeholder="1000">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Pagaré de garantía ($)</label>
+        <input type="number" class="form-control" id="renta-monto-pagare" min="0" step="0.01" placeholder="15000">
+      </div>
+      <div class="form-group">
+        <label>Penalización por día de retraso ($)</label>
+        <input type="number" class="form-control" id="renta-penalizacion" min="0" step="0.01" placeholder="300">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Uso convenido del remolque</label>
+      <input class="form-control" id="renta-uso-convenido" placeholder="Transporte de mercancía general">
+    </div>
+
+    <div style="margin:16px 0 8px;padding:12px;background:#f9fafb;border-radius:8px;border:1px solid var(--border)">
+      <div style="font-weight:600;margin-bottom:10px;color:var(--secondary)">Estado del remolque AL ENTREGAR</div>
+      <div class="form-row">
+        <div class="form-group"><label>Tirón / enganche</label><input class="form-control" id="renta-ent-tiron" value="Bueno"></div>
+        <div class="form-group"><label>Gato de elevación</label><input class="form-control" id="renta-ent-gato" value="Bueno"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Sistema eléctrico y luces</label><input class="form-control" id="renta-ent-electrico" value="Bueno"></div>
+        <div class="form-group"><label>Llantas</label><input class="form-control" id="renta-ent-llantas" value="Bueno"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Muelles y suspensión</label><input class="form-control" id="renta-ent-muelles" value="Bueno"></div>
+        <div class="form-group"><label>Piso / madera</label><input class="form-control" id="renta-ent-piso" value="Bueno"></div>
+      </div>
+      <div class="form-group"><label>Estructura (chasis, polveras)</label><input class="form-control" id="renta-ent-estructura" value="Bueno"></div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline" onclick="closeModal('modal-renta')">Cancelar</button>
+    <button class="btn btn-primary" onclick="saveRenta()">Guardar Renta</button>
+  </div>
+</dialog>
+
+<!-- MODAL DETALLE DE RENTA -->
+<dialog class="modal-dialog" id="modal-renta-detalle">
+  <div class="modal-header">
+    <h3 id="renta-detalle-titulo">Renta</h3>
+    <button class="modal-close" onclick="closeModal('modal-renta-detalle')">✕</button>
+  </div>
+  <div class="modal-body" id="renta-detalle-body"></div>
+</dialog>
+
+<!-- MODAL DEVOLUCION DE RENTA -->
+<dialog class="modal-dialog" id="modal-renta-devolucion">
+  <div class="modal-header">
+    <h3>Registrar Devolución</h3>
+    <button class="modal-close" onclick="closeModal('modal-renta-devolucion')">✕</button>
+  </div>
+  <div class="modal-body">
+    <input type="hidden" id="devolucion-renta-id">
+    <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Registra el estado del remolque al recibirlo de vuelta.</p>
+    <div class="form-row">
+      <div class="form-group"><label>Tirón / enganche</label><input class="form-control" id="renta-rec-tiron" value="Bueno"></div>
+      <div class="form-group"><label>Gato de elevación</label><input class="form-control" id="renta-rec-gato" value="Bueno"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Sistema eléctrico y luces</label><input class="form-control" id="renta-rec-electrico" value="Bueno"></div>
+      <div class="form-group"><label>Llantas</label><input class="form-control" id="renta-rec-llantas" value="Bueno"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Muelles y suspensión</label><input class="form-control" id="renta-rec-muelles" value="Bueno"></div>
+      <div class="form-group"><label>Piso / madera</label><input class="form-control" id="renta-rec-piso" value="Bueno"></div>
+    </div>
+    <div class="form-group"><label>Estructura (chasis, polveras)</label><input class="form-control" id="renta-rec-estructura" value="Bueno"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline" onclick="closeModal('modal-renta-devolucion')">Cancelar</button>
+    <button class="btn btn-primary" onclick="confirmarDevolucionRenta()">Confirmar devolución</button>
+  </div>
+</dialog>
+
 <!-- HIDDEN FILE INPUT -->
 <input type="file" id="hidden-file-input" style="display:none" accept=".xlsx,.xls" onchange="handleFileImport()">
 
@@ -1219,7 +1474,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /* ─── CACHÉ LOCAL (espejo de Supabase) ────────────────────────── */
-const CACHE = { clientes: [], vehiculos: [], ordenes: [], refacciones: [], cotizaciones: [] };
+const CACHE = { clientes: [], vehiculos: [], ordenes: [], refacciones: [], cotizaciones: [], remolques: [], rentas: [] };
 
 /* ─── CATÁLOGO DE VEHÍCULOS ───────────────────────────────────── */
 let VEHICULO_CATALOG = {};
@@ -1256,6 +1511,11 @@ const ICONS = {
   plus:         '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
   x:            '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
   logout:       '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>',
+  key:          '<path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>',
+  upload:       '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
+  camera:       '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
+  filecheck:    '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/><path d="m9 15 2 2 4-4"/>',
+  eraser:       '<path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/>',
 };
 function icon(name, size) {
   size = size || 16;
@@ -1279,6 +1539,8 @@ const DB = {
   parts:        () => CACHE.refacciones,
   refacciones:  () => CACHE.refacciones,
   cotizaciones: () => CACHE.cotizaciones,
+  remolques:    () => CACHE.remolques,
+  rentas:       () => CACHE.rentas,
 
   /* Sincroniza cambios con Supabase en segundo plano (fire-and-forget) */
   _push(table, newData, oldData) {
@@ -1314,6 +1576,8 @@ const DB = {
   saveParts(v)         { DB.saveRefacciones(v); },
   saveRefacciones(v)   { const o = CACHE.refacciones;   CACHE.refacciones = v;   DB._push('refacciones', v, o); },
   saveCotizaciones(v)  { const o = CACHE.cotizaciones;  CACHE.cotizaciones = v;  DB._push('cotizaciones', v, o); },
+  saveRemolques(v)     { const o = CACHE.remolques;     CACHE.remolques = v;     DB._push('remolques', v, o); },
+  saveRentas(v)        { const o = CACHE.rentas;        CACHE.rentas = v;        DB._push('rentas', v, o); },
 };
 
 /* SEED — solo si las tablas están vacías en Supabase */
@@ -1355,12 +1619,14 @@ async function _loadAll(table) {
 
 async function initApp() {
   try {
-    const [c, v, o, r, cot, cat] = await Promise.all([
+    const [c, v, o, r, cot, rem, ren, cat] = await Promise.all([
       _loadAll('clientes'),
       _loadAll('vehiculos'),
       _loadAll('ordenes'),
       _loadAll('refacciones'),
       _loadAll('cotizaciones'),
+      _loadAll('remolques'),
+      _loadAll('rentas'),
       fetch('catalogo-vehiculos.json').then(res => res.ok ? res.json() : {}).catch(() => ({}))
     ]);
 
@@ -1371,6 +1637,8 @@ async function initApp() {
       o.error   && `ordenes: ${o.error.message}`,
       r.error   && `refacciones: ${r.error.message}`,
       cot.error && `cotizaciones: ${cot.error.message}`,
+      rem.error && `remolques: ${rem.error.message}`,
+      ren.error && `rentas: ${ren.error.message}`,
     ].filter(Boolean);
 
     if (tableErrors.length) {
@@ -1383,6 +1651,8 @@ async function initApp() {
     CACHE.ordenes       = o.data   || [];
     CACHE.refacciones   = r.data   || [];
     CACHE.cotizaciones  = cot.data || [];
+    CACHE.remolques     = rem.data || [];
+    CACHE.rentas        = ren.data || [];
     VEHICULO_CATALOG    = cat      || {};
 
     // Avisar si tablas críticas cargaron vacías (posible RLS bloqueando SELECT)
@@ -1451,9 +1721,11 @@ let currentOrdenLineas = [];
 let ordenRefaccionesMap = {};
 
 /* ═══════════════════════════════════════════════════════════════ UI HELPERS */
-const PAGE_TITLES = { dashboard: 'Dashboard', clientes: 'Clientes', vehiculos: 'Vehiculos', ordenes: 'Ordenes', 'por-cobrar': 'Por Cobrar', cotizaciones: 'Cotizaciones', inventario: 'Inventario', reportes: 'Reportes', exportar: 'Exportar' };
+const PAGE_TITLES = { dashboard: 'Dashboard', clientes: 'Clientes', vehiculos: 'Vehiculos', ordenes: 'Ordenes', 'por-cobrar': 'Por Cobrar', cotizaciones: 'Cotizaciones', inventario: 'Inventario', remolques: 'Remolques', rentas: 'Rentas', reportes: 'Reportes', exportar: 'Exportar' };
 const STATUS_LABELS   = { recibido: ['badge-gray', 'Recibido'], en_proceso: ['badge-red', 'En Proceso'], completado: ['badge-green', 'Completado'] };
 const PRIORITY_LABELS = { normal: ['badge-gray', 'Normal'], alta: ['badge-yellow', '⚡ Alta'], urgente: ['badge-red', '🔴 Urgente'] };
+const RENTA_ESTADO_LABELS = { pendiente_firma: ['badge-yellow', 'Pendiente de firma'], activo: ['badge-blue', 'Activo'], completado: ['badge-green', 'Completado'], cancelado: ['badge-gray', 'Cancelado'] };
+const REMOLQUE_ESTADO_LABELS = { disponible: ['badge-green', 'Disponible'], rentado: ['badge-red', 'Rentado'], mantenimiento: ['badge-yellow', 'Mantenimiento'] };
 
 function navigate(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -1464,7 +1736,8 @@ function navigate(page) {
   closeSidebar();
   const renderers = {
     dashboard: renderDashboard, clientes: renderClientes, vehiculos: renderVehiculos,
-    ordenes: renderOrdenes, 'por-cobrar': renderPorCobrar, cotizaciones: renderCotizaciones, inventario: renderInventario, reportes: renderReportes
+    ordenes: renderOrdenes, 'por-cobrar': renderPorCobrar, cotizaciones: renderCotizaciones, inventario: renderInventario,
+    remolques: renderRemolques, rentas: renderRentas, reportes: renderReportes
   };
   if (renderers[page]) renderers[page]();
 }
@@ -3287,6 +3560,11 @@ function openInlineCotizacionClienteForm() {
   openInlineClienteForm();
 }
 
+function openInlineRentaClienteForm() {
+  _inlineContext = 'renta';
+  openInlineClienteForm();
+}
+
 function saveInlineCliente() {
   const nombre = document.getElementById('inline-cliente-nombre').value.trim();
   const tel = document.getElementById('inline-cliente-tel').value.trim();
@@ -3308,6 +3586,8 @@ function saveInlineCliente() {
   if (_inlineContext === 'cotizacion') {
     populateClienteSelect('cotizacion-cliente', newCliente.id);
     loadVehiculosCotizacionCliente();
+  } else if (_inlineContext === 'renta') {
+    populateClienteSelect('renta-cliente', newCliente.id);
   } else {
     populateClienteSelect('orden-cliente', newCliente.id);
     loadVehiculosCliente();
@@ -3983,6 +4263,446 @@ function viewCotizacion(id) {
   openModal('modal-orden-detalle');
 }
 
+/* ═══════════════════════════════════════════════════════════════ REMOLQUES */
+function renderRemolques() {
+  const q = (document.getElementById('search-remolques')?.value || '').toLowerCase();
+  let rows = DB.remolques();
+  if (q) rows = rows.filter(m => (m.tipo||'').toLowerCase().includes(q) || (m.placas||'').toLowerCase().includes(q) || (m.marcaModeloAnio||'').toLowerCase().includes(q));
+  document.getElementById('tbody-remolques').innerHTML = rows.length
+    ? rows.map(m => `<tr>
+        <td><strong>${esc(m.tipo)}</strong></td>
+        <td class="hide-mobile">${esc(m.marcaModeloAnio)||'—'}</td>
+        <td class="hide-mobile">${esc(m.placas)||'—'}</td>
+        <td>${badge(REMOLQUE_ESTADO_LABELS, m.estado||'disponible')}</td>
+        <td><button class="btn btn-outline btn-sm btn-icon" onclick="editRemolque('${m.id}')">${icon('edit')}</button><button class="btn btn-danger btn-sm btn-icon" onclick="deleteRemolque('${m.id}')">${icon('trash')}</button></td>
+      </tr>`).join('')
+    : `<tr><td colspan="5" class="empty-state">Sin remolques registrados</td></tr>`;
+}
+
+function openNewRemolqueModal() {
+  document.getElementById('remolque-id').value = '';
+  document.getElementById('modal-remolque').querySelector('h3').textContent = 'Nuevo Remolque';
+  ['remolque-tipo','remolque-capacidad','remolque-marca-modelo-anio','remolque-serie','remolque-placas','remolque-color','remolque-medidas','remolque-notas'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('remolque-estado').value = 'disponible';
+  openModal('modal-remolque');
+}
+
+function editRemolque(id) {
+  const m = DB.remolques().find(m => m.id === id);
+  if (!m) return;
+  document.getElementById('modal-remolque').querySelector('h3').textContent = 'Editar Remolque';
+  document.getElementById('remolque-id').value = m.id;
+  document.getElementById('remolque-tipo').value = m.tipo || '';
+  document.getElementById('remolque-capacidad').value = m.capacidad || '';
+  document.getElementById('remolque-marca-modelo-anio').value = m.marcaModeloAnio || '';
+  document.getElementById('remolque-serie').value = m.serie || '';
+  document.getElementById('remolque-placas').value = m.placas || '';
+  document.getElementById('remolque-color').value = m.color || '';
+  document.getElementById('remolque-medidas').value = m.medidas || '';
+  document.getElementById('remolque-estado').value = m.estado || 'disponible';
+  document.getElementById('remolque-notas').value = m.notas || '';
+  openModal('modal-remolque');
+}
+
+function saveRemolque() {
+  const tipo = document.getElementById('remolque-tipo').value.trim();
+  if (!tipo) { toast('El tipo de remolque es requerido.', 'danger'); return; }
+  const id = document.getElementById('remolque-id').value;
+  let rows = DB.remolques();
+  const existing = id ? rows.find(m => m.id === id) : null;
+  const obj = {
+    id: id || DB.uid(),
+    tipo,
+    capacidad: document.getElementById('remolque-capacidad').value.trim(),
+    marcaModeloAnio: document.getElementById('remolque-marca-modelo-anio').value.trim(),
+    serie: document.getElementById('remolque-serie').value.trim(),
+    placas: document.getElementById('remolque-placas').value.trim().toUpperCase(),
+    color: document.getElementById('remolque-color').value.trim(),
+    medidas: document.getElementById('remolque-medidas').value.trim(),
+    estado: document.getElementById('remolque-estado').value,
+    notas: document.getElementById('remolque-notas').value.trim(),
+    creadoEn: existing?.creadoEn || new Date().toISOString(),
+  };
+  if (id) rows = rows.map(m => m.id === id ? obj : m);
+  else rows.push(obj);
+  DB.saveRemolques(rows);
+  closeModal('modal-remolque');
+  renderRemolques();
+  toast(id ? 'Remolque actualizado.' : 'Remolque registrado.');
+}
+
+function deleteRemolque(id) {
+  if (!confirm('¿Eliminar remolque?')) return;
+  DB.saveRemolques(DB.remolques().filter(m => m.id !== id));
+  renderRemolques();
+  toast('Remolque eliminado.', 'info');
+}
+
+/* ═══════════════════════════════════════════════════════════════ RENTAS */
+const RENTA_LINK_BASE = 'https://sturner1590-code.github.io/muelles-la-flecha/contrato-renta.html';
+function rentaContratoLink(renta) { return `${RENTA_LINK_BASE}?token=${renta.token}`; }
+
+/* Convierte un monto a su representación en letras para pagarés/contratos, ej.
+   1500.50 -> "MIL QUINIENTOS PESOS 50/100 M.N." */
+function _numeroALetras(num) {
+  num = Math.abs(Number(num) || 0);
+  const entero = Math.floor(num);
+  const centavos = Math.round((num - entero) * 100);
+
+  const UNIDADES = ['', 'UN', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE'];
+  const ESPECIALES = { 10:'DIEZ',11:'ONCE',12:'DOCE',13:'TRECE',14:'CATORCE',15:'QUINCE',16:'DIECISÉIS',17:'DIECISIETE',18:'DIECIOCHO',19:'DIECINUEVE',
+    20:'VEINTE',21:'VEINTIUNO',22:'VEINTIDÓS',23:'VEINTITRÉS',24:'VEINTICUATRO',25:'VEINTICINCO',26:'VEINTISÉIS',27:'VEINTISIETE',28:'VEINTIOCHO',29:'VEINTINUEVE' };
+  const DECENAS = ['','','','TREINTA','CUARENTA','CINCUENTA','SESENTA','SETENTA','OCHENTA','NOVENTA'];
+  const CENTENAS = ['','CIENTO','DOSCIENTOS','TRESCIENTOS','CUATROCIENTOS','QUINIENTOS','SEISCIENTOS','SETECIENTOS','OCHOCIENTOS','NOVECIENTOS'];
+
+  function dosDigitos(n) {
+    if (n === 0) return '';
+    if (n < 10) return UNIDADES[n];
+    if (n <= 29) return ESPECIALES[n];
+    const d = Math.floor(n/10), u = n%10;
+    return DECENAS[d] + (u ? ' Y ' + UNIDADES[u] : '');
+  }
+  function tresDigitos(n) {
+    if (n === 0) return '';
+    if (n === 100) return 'CIEN';
+    const c = Math.floor(n/100), resto = n%100;
+    return (c ? CENTENAS[c] + ' ' : '') + dosDigitos(resto);
+  }
+  function seisDigitos(n) {
+    const miles = Math.floor(n/1000), resto = n%1000;
+    let out = '';
+    if (miles > 0) { out += (miles === 1 ? 'MIL' : tresDigitos(miles) + ' MIL'); if (resto) out += ' '; }
+    out += tresDigitos(resto);
+    return out.trim();
+  }
+  function conMillones(n) {
+    const millones = Math.floor(n/1000000), resto = n % 1000000;
+    let out = '';
+    if (millones > 0) { out += (millones === 1 ? 'UN MILLÓN' : tresDigitos(millones) + ' MILLONES'); if (resto) out += ' '; }
+    out += seisDigitos(resto);
+    return out.trim();
+  }
+
+  const letras = entero === 0 ? 'CERO' : conMillones(entero);
+  return `${letras} PESOS ${String(centavos).padStart(2,'0')}/100 M.N.`;
+}
+
+let rentaFilter = 'all';
+function setRentaFilter(status) {
+  rentaFilter = status;
+  document.querySelectorAll('#renta-filters [data-status]').forEach(el => el.classList.toggle('active', el.dataset.status === status));
+  renderRentas();
+}
+
+function renderRentas() {
+  const q = (document.getElementById('search-rentas')?.value || '').toLowerCase();
+  let rows = DB.rentas();
+  if (rentaFilter !== 'all') rows = rows.filter(r => r.estado === rentaFilter);
+  if (q) rows = rows.filter(r =>
+    getClienteName(r.clienteId).toLowerCase().includes(q) ||
+    (DB.remolques().find(m => m.id === r.remolqueId)?.tipo || '').toLowerCase().includes(q)
+  );
+  rows = [...rows].sort((a,b) => (b.creadoEn||'').localeCompare(a.creadoEn||''));
+
+  document.getElementById('tbody-rentas').innerHTML = rows.length
+    ? rows.map(r => {
+        const remolque = DB.remolques().find(m => m.id === r.remolqueId);
+        const remolqueLabel = remolque ? `${esc(remolque.tipo)}${remolque.placas ? ' · ' + esc(remolque.placas) : ''}` : '—';
+        const periodo = `${fmtDate(r.fechaInicio)} – ${fmtDate(r.fechaFin)}`;
+        return `<tr style="cursor:pointer" onclick="viewRenta('${r.id}')">
+          <td><strong>${getClienteName(r.clienteId)}</strong></td>
+          <td>${remolqueLabel}</td>
+          <td class="hide-mobile" style="font-size:12px">${periodo}</td>
+          <td>${badge(RENTA_ESTADO_LABELS, r.estado)}</td>
+          <td class="hide-mobile">${fmt(r.montoRenta)}</td>
+          <td onclick="event.stopPropagation()"><button class="btn btn-danger btn-sm btn-icon" onclick="deleteRenta('${r.id}')">${icon('trash')}</button></td>
+        </tr>`;
+      }).join('')
+    : `<tr><td colspan="6" class="empty-state">Sin rentas registradas</td></tr>`;
+}
+
+function selectRentaClienteFromDatalist() {
+  const input = document.getElementById('renta-cliente');
+  const currentValue = input.value.trim();
+  const cliente = DB.clientes().find(c => c.nombre.toLowerCase() === currentValue.toLowerCase() || c.id === currentValue);
+  if (cliente) { input.value = cliente.nombre; input.dataset.clienteId = cliente.id; }
+  else input.dataset.clienteId = '';
+}
+
+function openNewRentaModal() {
+  document.getElementById('renta-id').value = '';
+  document.getElementById('renta-modal-titulo').textContent = 'Nueva Renta de Remolque';
+  const clienteInp = document.getElementById('renta-cliente');
+  clienteInp.value = ''; clienteInp.dataset.clienteId = '';
+  populateClienteSelect('renta-cliente', '');
+  const sel = document.getElementById('renta-remolque');
+  sel.innerHTML = DB.remolques().length
+    ? DB.remolques().map(m => `<option value="${m.id}">${esc(m.tipo)}${m.marcaModeloAnio ? ' — ' + esc(m.marcaModeloAnio) : ''} (${(REMOLQUE_ESTADO_LABELS[m.estado||'disponible']||[])[1]||m.estado})</option>`).join('')
+    : '<option value="">— Registra un remolque primero —</option>';
+  const hoy = new Date().toISOString().slice(0,10);
+  document.getElementById('renta-fecha-inicio').value = hoy;
+  document.getElementById('renta-fecha-fin').value = hoy;
+  document.getElementById('renta-hora-fin').value = '18:00';
+  ['renta-lugar-entrega','renta-monto-renta','renta-monto-deposito','renta-monto-pagare','renta-penalizacion','renta-uso-convenido'].forEach(id => document.getElementById(id).value = '');
+  ['renta-ent-tiron','renta-ent-gato','renta-ent-electrico','renta-ent-llantas','renta-ent-muelles','renta-ent-piso','renta-ent-estructura'].forEach(id => document.getElementById(id).value = 'Bueno');
+  openModal('modal-renta');
+}
+
+function saveRenta() {
+  const clienteId = resolveClienteId('renta-cliente');
+  const remolqueId = document.getElementById('renta-remolque').value;
+  const montoRenta = +document.getElementById('renta-monto-renta').value || 0;
+  const fechaInicio = document.getElementById('renta-fecha-inicio').value;
+  const fechaFin = document.getElementById('renta-fecha-fin').value;
+  if (!clienteId || !remolqueId || !montoRenta || !fechaInicio || !fechaFin) {
+    toast('Cliente, remolque, fechas y monto de renta son requeridos.', 'danger'); return;
+  }
+  const id = document.getElementById('renta-id').value;
+  let rows = DB.rentas();
+  const existing = id ? rows.find(r => r.id === id) : null;
+  const montoDeposito = +document.getElementById('renta-monto-deposito').value || 0;
+  const montoPagare = +document.getElementById('renta-monto-pagare').value || 0;
+
+  const obj = {
+    id: id || DB.uid(),
+    token: existing?.token || crypto.randomUUID(),
+    clienteId, remolqueId,
+    estado: existing?.estado || 'pendiente_firma',
+    fechaContrato: existing?.fechaContrato || new Date().toISOString().slice(0,10),
+    fechaInicio, fechaFin,
+    horaFin: document.getElementById('renta-hora-fin').value,
+    lugarEntrega: document.getElementById('renta-lugar-entrega').value.trim(),
+    penalizacionDiaria: +document.getElementById('renta-penalizacion').value || 0,
+    montoRenta, montoRentaLetra: _numeroALetras(montoRenta),
+    montoDeposito,
+    montoPagare, montoPagareLetra: _numeroALetras(montoPagare),
+    usoConvenido: document.getElementById('renta-uso-convenido').value.trim(),
+    entTiron: document.getElementById('renta-ent-tiron').value.trim(),
+    entGato: document.getElementById('renta-ent-gato').value.trim(),
+    entElectrico: document.getElementById('renta-ent-electrico').value.trim(),
+    entLlantas: document.getElementById('renta-ent-llantas').value.trim(),
+    entMuelles: document.getElementById('renta-ent-muelles').value.trim(),
+    entPiso: document.getElementById('renta-ent-piso').value.trim(),
+    entEstructura: document.getElementById('renta-ent-estructura').value.trim(),
+    recTiron: existing?.recTiron || '', recGato: existing?.recGato || '', recElectrico: existing?.recElectrico || '',
+    recLlantas: existing?.recLlantas || '', recMuelles: existing?.recMuelles || '', recPiso: existing?.recPiso || '', recEstructura: existing?.recEstructura || '',
+    arrendatarioNombreFirma: existing?.arrendatarioNombreFirma || '',
+    arrendatarioDomicilio: existing?.arrendatarioDomicilio || '',
+    arrendatarioIdentificacion: existing?.arrendatarioIdentificacion || '',
+    arrendatarioTelefono: existing?.arrendatarioTelefono || '',
+    arrendatarioFirmaUrl: existing?.arrendatarioFirmaUrl || '',
+    ineFrenteUrl: existing?.ineFrenteUrl || '',
+    ineReversoUrl: existing?.ineReversoUrl || '',
+    comprobanteUrl: existing?.comprobanteUrl || '',
+    pdfUrl: existing?.pdfUrl || '',
+    fechaFirmado: existing?.fechaFirmado || '',
+    fechaDevuelto: existing?.fechaDevuelto || '',
+    notas: existing?.notas || '',
+    creadoEn: existing?.creadoEn || new Date().toISOString(),
+  };
+  if (id) rows = rows.map(r => r.id === id ? obj : r);
+  else rows.push(obj);
+  DB.saveRentas(rows);
+  closeModal('modal-renta');
+  renderRentas();
+  toast(id ? 'Renta actualizada.' : 'Renta creada. Envía el contrato al cliente.');
+  viewRenta(obj.id);
+}
+
+function deleteRenta(id) {
+  if (!confirm('¿Eliminar esta renta? Esto no se puede deshacer.')) return;
+  DB.saveRentas(DB.rentas().filter(r => r.id !== id));
+  renderRentas();
+  toast('Renta eliminada.', 'info');
+}
+
+function viewRenta(id) {
+  const r = DB.rentas().find(r => r.id === id);
+  if (!r) return;
+  const remolque = DB.remolques().find(m => m.id === r.remolqueId);
+  const link = rentaContratoLink(r);
+
+  document.getElementById('renta-detalle-titulo').textContent = `Renta — ${getClienteName(r.clienteId)}`;
+
+  let accionesHtml = '';
+  if (r.estado === 'pendiente_firma') {
+    accionesHtml = `
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:14px;margin-bottom:14px">
+        <div style="font-weight:600;margin-bottom:8px">Pendiente de firma</div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Envía este link al arrendatario por WhatsApp. Solo sirve para esta renta.</p>
+        <button class="btn btn-primary" onclick="enviarContratoWhatsApp('${r.id}')" style="width:100%;justify-content:center;margin-bottom:8px">${icon('send')} Enviar contrato por WhatsApp</button>
+        <div style="display:flex;gap:6px">
+          <input class="form-control" readonly value="${esc(link)}" style="font-size:11px" onclick="this.select()">
+          <button class="btn btn-outline btn-sm" onclick="navigator.clipboard.writeText('${link}').then(()=>toast('Link copiado.'))">Copiar</button>
+        </div>
+      </div>`;
+  } else if (r.estado === 'activo' || r.estado === 'completado') {
+    const docs = [
+      ['INE (frente)', r.ineFrenteUrl], ['INE (reverso)', r.ineReversoUrl],
+      ['Comprobante de domicilio', r.comprobanteUrl], ['Contrato firmado (PDF)', r.pdfUrl],
+    ].filter(([,p]) => p);
+    accionesHtml = `
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px;margin-bottom:14px">
+        <div style="font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px">${icon('filecheck',14)} Firmado el ${fmtDateTime(r.fechaFirmado)}</div>
+        <div style="font-size:13px;margin-bottom:4px"><strong>${esc(r.arrendatarioNombreFirma)}</strong></div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">${esc(r.arrendatarioDomicilio)||'—'} · ID: ${esc(r.arrendatarioIdentificacion)||'—'} · Tel: ${esc(r.arrendatarioTelefono)||'—'}</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          ${docs.map(([label, path]) => `<button class="btn btn-outline btn-sm" onclick="verDocumentoRenta('${esc(path)}')" style="justify-content:flex-start">${icon('upload',13)} Ver ${label}</button>`).join('') || '<span style="font-size:12px;color:var(--muted)">Sin documentos.</span>'}
+        </div>
+      </div>
+      ${r.estado === 'activo' ? `<button class="btn btn-secondary" style="width:100%;justify-content:center;margin-bottom:14px" onclick="closeModal('modal-renta-detalle');openDevolucionModal('${r.id}')">Registrar devolución del remolque</button>` : ''}
+      ${r.estado === 'completado' ? `<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px;margin-bottom:14px"><div style="font-weight:600">Remolque devuelto el ${fmtDateTime(r.fechaDevuelto)}</div></div>` : ''}
+    `;
+  }
+
+  document.getElementById('renta-detalle-body').innerHTML = `
+    ${accionesHtml}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 10px;font-size:13px">
+      <div><div style="font-size:11px;color:var(--muted)">Cliente</div><div style="font-weight:600">${getClienteName(r.clienteId)}</div></div>
+      <div><div style="font-size:11px;color:var(--muted)">Remolque</div><div style="font-weight:600">${esc(remolque?.tipo)||'—'} ${esc(remolque?.marcaModeloAnio)||''}</div></div>
+      <div><div style="font-size:11px;color:var(--muted)">Periodo</div><div>${fmtDate(r.fechaInicio)} – ${fmtDate(r.fechaFin)} ${esc(r.horaFin)||''}</div></div>
+      <div><div style="font-size:11px;color:var(--muted)">Lugar de entrega</div><div>${esc(r.lugarEntrega)||'—'}</div></div>
+      <div><div style="font-size:11px;color:var(--muted)">Renta</div><div>${fmt(r.montoRenta)}</div></div>
+      <div><div style="font-size:11px;color:var(--muted)">Depósito</div><div>${fmt(r.montoDeposito)}</div></div>
+      <div><div style="font-size:11px;color:var(--muted)">Pagaré</div><div>${fmt(r.montoPagare)}</div></div>
+      <div><div style="font-size:11px;color:var(--muted)">Penalización/día</div><div>${fmt(r.penalizacionDiaria)}</div></div>
+    </div>
+    ${r.usoConvenido ? `<div style="font-size:12px;color:var(--muted);margin-top:10px">Uso convenido: ${esc(r.usoConvenido)}</div>` : ''}
+  `;
+
+  openModal('modal-renta-detalle');
+}
+
+function enviarContratoWhatsApp(id) {
+  const r = DB.rentas().find(r => r.id === id);
+  if (!r) return;
+  const cliente = DB.clientes().find(c => c.id === r.clienteId);
+  if (!cliente || !cliente.telefono) { toast('Este cliente no tiene teléfono registrado.', 'danger'); return; }
+  const remolque = DB.remolques().find(m => m.id === r.remolqueId);
+  const link = rentaContratoLink(r);
+  let msg = `Hola ${cliente.nombre}, le saluda Eduardo de Muelles y Mofles La Flecha.\n\n`;
+  msg += `Le compartimos el link para completar y firmar digitalmente el contrato de arrendamiento`;
+  if (remolque) msg += ` del remolque ${remolque.tipo}${remolque.marcaModeloAnio ? ' ' + remolque.marcaModeloAnio : ''}`;
+  msg += `:\n${link}\n\n`;
+  msg += `En el link va a necesitar: su firma, y fotos de su INE (ambos lados) y de un comprobante de domicilio no mayor a 3 meses. Puede tomarlas con la cámara del celular o subir el archivo.\n\n`;
+  msg += `Cualquier duda quedamos a sus órdenes.`;
+  const phone = _waPhone(cliente.telefono);
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+async function verDocumentoRenta(path) {
+  if (!path) return;
+  const { data, error } = await sb.storage.from('rentas-docs').createSignedUrl(path, 3600);
+  if (error || !data) { toast('No se pudo abrir el documento: ' + (error?.message||''), 'danger'); return; }
+  window.open(data.signedUrl, '_blank');
+}
+
+function openDevolucionModal(id) {
+  document.getElementById('devolucion-renta-id').value = id;
+  ['renta-rec-tiron','renta-rec-gato','renta-rec-electrico','renta-rec-llantas','renta-rec-muelles','renta-rec-piso','renta-rec-estructura'].forEach(fid => document.getElementById(fid).value = 'Bueno');
+  openModal('modal-renta-devolucion');
+}
+
+function confirmarDevolucionRenta() {
+  const id = document.getElementById('devolucion-renta-id').value;
+  let rows = DB.rentas();
+  const r = rows.find(r => r.id === id);
+  if (!r) return;
+  const obj = {
+    ...r,
+    estado: 'completado',
+    fechaDevuelto: new Date().toISOString(),
+    recTiron: document.getElementById('renta-rec-tiron').value.trim(),
+    recGato: document.getElementById('renta-rec-gato').value.trim(),
+    recElectrico: document.getElementById('renta-rec-electrico').value.trim(),
+    recLlantas: document.getElementById('renta-rec-llantas').value.trim(),
+    recMuelles: document.getElementById('renta-rec-muelles').value.trim(),
+    recPiso: document.getElementById('renta-rec-piso').value.trim(),
+    recEstructura: document.getElementById('renta-rec-estructura').value.trim(),
+  };
+  rows = rows.map(x => x.id === id ? obj : x);
+  DB.saveRentas(rows);
+  closeModal('modal-renta-devolucion');
+  renderRentas();
+  toast('Devolución registrada.');
+}
+
+/* ── Firma digital (canvas), reutilizada para la firma del arrendador ── */
+function _initSignaturePad(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  ctx.strokeStyle = '#1a1c29';
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  let drawing = false, last = null;
+
+  function pos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width, scaleY = canvas.height / rect.height;
+    const p = e.touches ? e.touches[0] : e;
+    return { x: (p.clientX - rect.left) * scaleX, y: (p.clientY - rect.top) * scaleY };
+  }
+  function start(e) { drawing = true; canvas._hasSignature = true; last = pos(e); e.preventDefault(); }
+  function move(e) {
+    if (!drawing) return;
+    const p = pos(e);
+    ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+    last = p;
+    e.preventDefault();
+  }
+  function end() { drawing = false; }
+
+  canvas.addEventListener('mousedown', start);
+  canvas.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', end);
+  canvas.addEventListener('touchstart', start, { passive: false });
+  canvas.addEventListener('touchmove', move, { passive: false });
+  canvas.addEventListener('touchend', end);
+  canvas._hasSignature = false;
+}
+
+function limpiarFirmaCanvas(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+  canvas._hasSignature = false;
+}
+
+function _canvasToBlob(canvasId) {
+  return new Promise(resolve => document.getElementById(canvasId).toBlob(resolve, 'image/png'));
+}
+
+const RENTA_PUBLIC_BUCKET = 'rentas-publico';
+const ARRENDADOR_FIRMA_PATH = 'firma-arrendador.png';
+function arrendadorFirmaPublicUrl() {
+  return sb.storage.from(RENTA_PUBLIC_BUCKET).getPublicUrl(ARRENDADOR_FIRMA_PATH).data.publicUrl;
+}
+
+let _firmaArrendadorPadInit = false;
+function openFirmaArrendadorModal() {
+  if (!_firmaArrendadorPadInit) { _initSignaturePad('firma-arrendador-canvas'); _firmaArrendadorPadInit = true; }
+  limpiarFirmaCanvas('firma-arrendador-canvas');
+  const preview = document.getElementById('firma-arrendador-preview');
+  const img = document.getElementById('firma-arrendador-preview-img');
+  img.onload = () => { preview.style.display = 'block'; };
+  img.onerror = () => { preview.style.display = 'none'; };
+  img.src = arrendadorFirmaPublicUrl() + '?t=' + Date.now();
+  openModal('modal-firma-arrendador');
+}
+
+async function guardarFirmaArrendador() {
+  const canvas = document.getElementById('firma-arrendador-canvas');
+  if (!canvas._hasSignature) { toast('Dibuja tu firma antes de guardar.', 'danger'); return; }
+  const btn = document.getElementById('btn-guardar-firma-arrendador');
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  const blob = await _canvasToBlob('firma-arrendador-canvas');
+  const { error } = await sb.storage.from(RENTA_PUBLIC_BUCKET).upload(ARRENDADOR_FIRMA_PATH, blob, { upsert: true, contentType: 'image/png' });
+  btn.disabled = false; btn.textContent = 'Guardar firma';
+  if (error) { toast('No se pudo guardar la firma: ' + error.message, 'danger'); return; }
+  closeModal('modal-firma-arrendador');
+  toast('Firma del arrendador guardada. Se usará en los próximos contratos.');
+}
+
 /* ═══════════════════════════════════════════════════════════════ REALTIME SYNC */
 function initRealtime() {
   const TABLE_PAGE = {
@@ -3991,6 +4711,8 @@ function initRealtime() {
     ordenes:      'ordenes',
     refacciones:  'inventario',
     cotizaciones: 'cotizaciones',
+    remolques:    'remolques',
+    rentas:       'rentas',
   };
   const RENDER_FN = {
     clientes:     renderClientes,
@@ -3998,6 +4720,8 @@ function initRealtime() {
     ordenes:      renderOrdenes,
     inventario:   renderInventario,
     cotizaciones: renderCotizaciones,
+    remolques:    renderRemolques,
+    rentas:       renderRentas,
   };
 
   Object.entries(TABLE_PAGE).forEach(([table, targetPage]) => {
