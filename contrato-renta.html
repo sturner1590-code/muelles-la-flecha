@@ -63,6 +63,10 @@
     .camera-hint { position: absolute; bottom: 14px; left: 0; right: 0; text-align: center; color: #fff; font-size: 12px; opacity: .85; }
     .camera-bottombar { display: flex; gap: 10px; padding: 16px; background: rgba(0,0,0,.45); }
     .camera-bottombar .btn { flex: 1; }
+    .doc-reuse-banner { background: #e3f9ee; border: 1.5px solid #17a768; border-radius: var(--radius); padding: 14px; margin-bottom: 16px; }
+    .doc-reuse-banner strong { display: block; font-size: 13px; color: #0d6b45; margin-bottom: 4px; }
+    .doc-reuse-banner p { font-size: 12px; color: #1a1c29; margin: 2px 0; }
+    .doc-reuse-banner .btn { margin-top: 10px; font-size: 11.5px; padding: 7px 12px; }
     canvas#firma-canvas { width: 100%; height: 170px; border: 1.5px dashed var(--border-strong); border-radius: var(--radius); touch-action: none; background: #fff; cursor: crosshair; display: block; }
     .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 12px 20px; border-radius: var(--radius-pill); border: none; font: inherit; font-weight: 700; cursor: pointer; font-size: 14px; }
     .btn-primary { background: var(--primary); color: #fff; box-shadow: 0 6px 16px rgba(238,28,37,.28); }
@@ -114,8 +118,14 @@
           <input class="form-control" id="f-domicilio" placeholder="Calle, número, colonia, ciudad" required>
         </div>
         <div class="form-group">
-          <label>Identificación oficial (tipo y número) *</label>
-          <input class="form-control" id="f-identificacion" placeholder="INE 1234567890123" required>
+          <label>Identificación oficial (tipo) *</label>
+          <select class="form-control" id="f-identificacion" required>
+            <option value="INE" selected>INE (Credencial para votar)</option>
+            <option value="Licencia de conducir">Licencia de conducir</option>
+            <option value="Pasaporte">Pasaporte</option>
+            <option value="Otra identificación oficial">Otra identificación oficial</option>
+          </select>
+          <div class="hint">No es necesario escribir el número, ya queda registrado en la fotografía.</div>
         </div>
       </div>
       <div class="form-group">
@@ -126,6 +136,13 @@
 
     <div class="card">
       <h1 style="text-align:left">Documentos requeridos</h1>
+      <div id="doc-reuse-banner" class="doc-reuse-banner" style="display:none">
+        <strong>Ya contamos con tu identificación y comprobante de domicilio</strong>
+        <p id="doc-reuse-fecha"></p>
+        <p>No es necesario que los subas de nuevo.</p>
+        <button type="button" class="btn btn-outline" onclick="_actualizarDocumentos()">¿Cambiaron? Actualiza tus documentos</button>
+      </div>
+      <div id="doc-upload-fields">
       <div class="form-group">
         <label>INE — lado frontal *</label>
         <div class="doc-upload" id="wrap-ine-frente">
@@ -163,6 +180,7 @@
           <div class="file-input-label" id="label-comprobante">Tomar foto o subir archivo</div>
           <div class="file-input-sub">JPG, PNG o PDF</div>
         </div>
+      </div>
       </div>
     </div>
 
@@ -215,6 +233,15 @@ const params = new URLSearchParams(location.search);
 const TOKEN = params.get('token');
 let CONTRATO = null;
 const ARCHIVOS = {}; // f-ine-frente, f-ine-reverso, f-comprobante -> File
+let REUTILIZANDO_DOCS = false; // true si el cliente ya tiene INE/comprobante en archivo (renta previa, <1 año)
+let DOCS_REUTILIZADOS = null; // { ineFrenteUrl, ineReversoUrl, comprobanteUrl } de la renta previa
+
+function _actualizarDocumentos() {
+  REUTILIZANDO_DOCS = false;
+  DOCS_REUTILIZADOS = null;
+  document.getElementById('doc-reuse-banner').style.display = 'none';
+  document.getElementById('doc-upload-fields').style.display = 'block';
+}
 
 function esc(s) {
   if (s === null || s === undefined) return '';
@@ -240,7 +267,7 @@ function construirClausulas(d) {
   return [
     { t: 'titulo', v: 'CONTRATO DE ARRENDAMIENTO DE BIEN MUEBLE (REMOLQUE)' },
     { t: 'parrafo', v: `Monclova, Coahuila, México — Fecha: ${fmtFechaLarga(d.fechaContrato)}` },
-    { t: 'parrafo', v: `Celebran el presente contrato, por una parte ${ARRENDADOR_NOMBRE} ("EL ARRENDADOR"), en su carácter de único propietario del bien mueble descrito; y por la otra parte ${d.nombre}, con domicilio en ${d.domicilio}, identificación oficial ${d.identificacion} y teléfono ${d.telefono} ("EL ARRENDATARIO"). Ambas partes declaran tener capacidad legal y se obligan libremente conforme a las siguientes cláusulas.` },
+    { t: 'parrafo', v: `Celebran el presente contrato, por una parte ${ARRENDADOR_NOMBRE} ("EL ARRENDADOR"), en su carácter de único propietario del bien mueble descrito; y por la otra parte ${d.nombre}, con domicilio en ${d.domicilio}, identificación oficial tipo ${d.identificacion} (fotografía anexa a este contrato) y teléfono ${d.telefono} ("EL ARRENDATARIO"). Ambas partes declaran tener capacidad legal y se obligan libremente conforme a las siguientes cláusulas.` },
     { t: 'clausula', v: `PRIMERA. OBJETO Y PROPIEDAD. EL ARRENDADOR otorga en arrendamiento a EL ARRENDATARIO el bien mueble (el "Remolque"): tipo ${d.remolqueTipo||'—'}, capacidad de carga ${d.remolqueCapacidad||'—'} kg, marca/modelo/año ${d.remolqueMarcaModeloAnio||'—'}, número de serie ${d.remolqueSerie||'—'}, placas ${d.remolquePlacas||'—'}, color ${d.remolqueColor||'—'}, medidas ${d.remolqueMedidas||'—'}. EL ARRENDADOR conserva en todo momento la propiedad del Remolque; este contrato es exclusivamente de uso temporal y NO transmite dominio, posesión definitiva ni opción de compra alguna. EL ARRENDATARIO reconoce expresamente que el Remolque es propiedad de EL ARRENDADOR.` },
     { t: 'clausula', v: `SEGUNDA. ESTADO DEL BIEN. EL ARRENDATARIO declara recibir el Remolque en buen estado de funcionamiento, según la columna "Al entregar", y se obliga a devolverlo en las mismas condiciones, salvo el desgaste normal por uso adecuado. La columna "Al recibir" se llenará al momento de la devolución:` },
     { t: 'tabla-entrega' },
@@ -296,6 +323,27 @@ async function cargarContrato() {
     CONTRATO = row;
     document.getElementById('f-nombre').value = row.clienteNombre && row.clienteNombre !== '—' ? row.clienteNombre : '';
     document.getElementById('f-telefono').value = row.clienteTelefono || '';
+
+    if (row.documentosReutilizables) {
+      REUTILIZANDO_DOCS = true;
+      DOCS_REUTILIZADOS = {
+        ineFrenteUrl: row.docReuseIneFrenteUrl,
+        ineReversoUrl: row.docReuseIneReversoUrl,
+        comprobanteUrl: row.docReuseComprobanteUrl,
+      };
+      if (row.docReuseNombre) document.getElementById('f-nombre').value = row.docReuseNombre;
+      if (row.docReuseDomicilio) document.getElementById('f-domicilio').value = row.docReuseDomicilio;
+      if (row.docReuseTelefono) document.getElementById('f-telefono').value = row.docReuseTelefono;
+      const selIdent = document.getElementById('f-identificacion');
+      const opcionValida = [...selIdent.options].some(o => o.value === row.docReuseIdentificacion);
+      if (opcionValida) selIdent.value = row.docReuseIdentificacion;
+
+      document.getElementById('doc-reuse-fecha').textContent = row.documentosFechaOriginal
+        ? 'Subidos el ' + new Date(row.documentosFechaOriginal).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) + '.'
+        : '';
+      document.getElementById('doc-reuse-banner').style.display = 'block';
+      document.getElementById('doc-upload-fields').style.display = 'none';
+    }
 
     pintarContratoPreview();
     _initFirmaCanvas();
@@ -566,7 +614,7 @@ async function enviarFirma() {
   const acepto = document.getElementById('f-acepto').checked;
 
   if (!nombre || !domicilio || !identificacion || !telefono) { alert('Completa todos tus datos.'); return; }
-  if (!ARCHIVOS['f-ine-frente'] || !ARCHIVOS['f-ine-reverso'] || !ARCHIVOS['f-comprobante']) { alert('Sube los 3 documentos requeridos (INE frente, INE reverso, comprobante de domicilio).'); return; }
+  if (!REUTILIZANDO_DOCS && (!ARCHIVOS['f-ine-frente'] || !ARCHIVOS['f-ine-reverso'] || !ARCHIVOS['f-comprobante'])) { alert('Sube los 3 documentos requeridos (INE frente, INE reverso, comprobante de domicilio).'); return; }
   if (!canvas._hasSignature) { alert('Dibuja tu firma antes de continuar.'); return; }
   if (!acepto) { alert('Debes aceptar los términos del contrato para continuar.'); return; }
 
@@ -574,24 +622,32 @@ async function enviarFirma() {
   btn.disabled = true;
 
   try {
-    _progreso('Preparando documentos…');
-    const [fIneFrente, fIneReverso, fComprobante] = await Promise.all([
-      _comprimirImagenSiAplica(ARCHIVOS['f-ine-frente']),
-      _comprimirImagenSiAplica(ARCHIVOS['f-ine-reverso']),
-      _comprimirImagenSiAplica(ARCHIVOS['f-comprobante']),
-    ]);
+    let pathIneFrente, pathIneReverso, pathComprobante;
 
-    _progreso('Subiendo INE (frente)…');
-    const extFrente = (fIneFrente.name.split('.').pop() || 'jpg');
-    const pathIneFrente = await _subirArchivo(fIneFrente, `${TOKEN}/ine-frente.${extFrente}`);
+    if (REUTILIZANDO_DOCS) {
+      pathIneFrente = DOCS_REUTILIZADOS.ineFrenteUrl;
+      pathIneReverso = DOCS_REUTILIZADOS.ineReversoUrl;
+      pathComprobante = DOCS_REUTILIZADOS.comprobanteUrl;
+    } else {
+      _progreso('Preparando documentos…');
+      const [fIneFrente, fIneReverso, fComprobante] = await Promise.all([
+        _comprimirImagenSiAplica(ARCHIVOS['f-ine-frente']),
+        _comprimirImagenSiAplica(ARCHIVOS['f-ine-reverso']),
+        _comprimirImagenSiAplica(ARCHIVOS['f-comprobante']),
+      ]);
 
-    _progreso('Subiendo INE (reverso)…');
-    const extReverso = (fIneReverso.name.split('.').pop() || 'jpg');
-    const pathIneReverso = await _subirArchivo(fIneReverso, `${TOKEN}/ine-reverso.${extReverso}`);
+      _progreso('Subiendo INE (frente)…');
+      const extFrente = (fIneFrente.name.split('.').pop() || 'jpg');
+      pathIneFrente = await _subirArchivo(fIneFrente, `${TOKEN}/ine-frente.${extFrente}`);
 
-    _progreso('Subiendo comprobante de domicilio…');
-    const extComp = (fComprobante.name.split('.').pop() || 'jpg');
-    const pathComprobante = await _subirArchivo(fComprobante, `${TOKEN}/comprobante.${extComp}`);
+      _progreso('Subiendo INE (reverso)…');
+      const extReverso = (fIneReverso.name.split('.').pop() || 'jpg');
+      pathIneReverso = await _subirArchivo(fIneReverso, `${TOKEN}/ine-reverso.${extReverso}`);
+
+      _progreso('Subiendo comprobante de domicilio…');
+      const extComp = (fComprobante.name.split('.').pop() || 'jpg');
+      pathComprobante = await _subirArchivo(fComprobante, `${TOKEN}/comprobante.${extComp}`);
+    }
 
     _progreso('Guardando tu firma…');
     const firmaDataUrl = canvas.toDataURL('image/png');
@@ -608,6 +664,7 @@ async function enviarFirma() {
       p_token: TOKEN, p_nombre: nombre, p_domicilio: domicilio, p_identificacion: identificacion,
       p_telefono: telefono, p_firma_url: pathFirma, p_ine_frente_url: pathIneFrente,
       p_ine_reverso_url: pathIneReverso, p_comprobante_url: pathComprobante, p_pdf_url: pathPdf,
+      p_reutiliza_documentos: REUTILIZANDO_DOCS,
     });
 
     if (rpcError || !ok) throw new Error(rpcError ? rpcError.message : 'El contrato ya había sido firmado.');
