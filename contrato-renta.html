@@ -29,10 +29,12 @@
     .header { text-align: center; padding: 18px 0 20px; }
     .header img { width: 100%; max-width: 190px; }
     .card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow); margin-bottom: 16px; }
-    h1 { font-family: var(--font-display); font-size: 18px; text-align: center; margin: 0 0 14px; color: var(--text); }
+    h1 { font-family: var(--font-display); font-size: 18px; text-align: center; margin: 0 0 26px; color: var(--text); }
     h2 { font-family: var(--font-display); font-size: 13px; color: var(--secondary); margin: 16px 0 6px; text-transform: uppercase; letter-spacing: .03em; }
-    p.clause { font-size: 12.5px; color: #333; margin: 0 0 10px; text-align: justify; }
+    p.clause { font-size: 12.5px; color: #333; margin: 0 0 16px; text-align: justify; }
     p.clause strong { color: var(--text); }
+    .contrato-logo-wrap { text-align: center; margin-bottom: 20px; padding-bottom: 18px; border-bottom: 1px solid var(--border); }
+    .contrato-logo { max-width: 230px; width: 58%; height: auto; }
     .tbl { width: 100%; border-collapse: collapse; font-size: 12px; margin: 10px 0; }
     .tbl th, .tbl td { border: 1px solid var(--border-strong); padding: 6px 8px; text-align: left; }
     .tbl th { background: #f3f4f8; font-weight: 600; }
@@ -67,6 +69,7 @@
     .doc-reuse-banner strong { display: block; font-size: 13px; color: #0d6b45; margin-bottom: 4px; }
     .doc-reuse-banner p { font-size: 12px; color: #1a1c29; margin: 2px 0; }
     .doc-reuse-banner .btn { margin-top: 10px; font-size: 11.5px; padding: 7px 12px; }
+    .firmado-acciones { display: none; flex-direction: column; gap: 10px; width: 100%; margin-top: 16px; }
     canvas#firma-canvas { width: 100%; height: 170px; border: 1.5px dashed var(--border-strong); border-radius: var(--radius); touch-action: none; background: #fff; cursor: crosshair; display: block; }
     .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 12px 20px; border-radius: var(--radius-pill); border: none; font: inherit; font-weight: 700; cursor: pointer; font-size: 14px; }
     .btn-primary { background: var(--primary); color: #fff; box-shadow: 0 6px 16px rgba(238,28,37,.28); }
@@ -99,8 +102,12 @@
   </div>
 
   <div id="estado-firmado" class="card state-msg" style="display:none">
-    <h2>¡Contrato firmado con éxito!</h2>
-    <p>Gracias. Tu contrato quedó registrado. Ya puedes cerrar esta ventana.</p>
+    <h2 id="firmado-titulo">¡Contrato firmado con éxito!</h2>
+    <p id="firmado-mensaje">Gracias. Tu contrato quedó registrado. Ya puedes cerrar esta ventana.</p>
+    <div id="firmado-acciones" class="firmado-acciones">
+      <button type="button" class="btn btn-outline btn-block" onclick="_verContratoPdf()">Ver contrato</button>
+      <button type="button" class="btn btn-primary btn-block" onclick="_descargarContratoPdf()">Descargar contrato</button>
+    </div>
   </div>
 
   <div id="contrato-contenido" style="display:none">
@@ -235,6 +242,21 @@ let CONTRATO = null;
 const ARCHIVOS = {}; // f-ine-frente, f-ine-reverso, f-comprobante -> File
 let REUTILIZANDO_DOCS = false; // true si el cliente ya tiene INE/comprobante en archivo (renta previa, <1 año)
 let DOCS_REUTILIZADOS = null; // { ineFrenteUrl, ineReversoUrl, comprobanteUrl } de la renta previa
+let ULTIMO_PDF_BLOB = null; // copia en memoria del PDF recien firmado, para "Ver"/"Descargar"
+
+function _verContratoPdf() {
+  if (!ULTIMO_PDF_BLOB) return;
+  window.open(URL.createObjectURL(ULTIMO_PDF_BLOB), '_blank');
+}
+function _descargarContratoPdf() {
+  if (!ULTIMO_PDF_BLOB) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(ULTIMO_PDF_BLOB);
+  a.download = 'Contrato-Arrendamiento-Remolque.pdf';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
 
 function _actualizarDocumentos() {
   REUTILIZANDO_DOCS = false;
@@ -284,7 +306,7 @@ function construirClausulas(d) {
 
 function pintarContrato(d) {
   const clausulas = construirClausulas(d);
-  let html = '';
+  let html = '<div class="contrato-logo-wrap"><img class="contrato-logo" src="logo-remolques-turner.png" alt="Remolques Turner"></div>';
   clausulas.forEach(c => {
     if (c.t === 'titulo') html += `<h1>${esc(c.v)}</h1>`;
     else if (c.t === 'tabla-entrega') {
@@ -363,7 +385,7 @@ function pintarContratoPreview() {
     telefono: document.getElementById('f-telefono')?.value || '_______________',
   });
 }
-['f-nombre'].forEach(id => document.addEventListener('DOMContentLoaded', () => {
+['f-nombre','f-domicilio','f-identificacion','f-telefono'].forEach(id => document.addEventListener('DOMContentLoaded', () => {
   const el = document.getElementById(id);
   if (el) el.addEventListener('input', pintarContratoPreview);
 }));
@@ -532,17 +554,33 @@ async function _generarPdf(d) {
   let y = 20;
 
   function ensureSpace(h) { if (y + h > pageHeight - 20) { doc.addPage(); y = 20; } }
+  async function logoEncabezado() {
+    try {
+      const resp = await fetch('logo-remolques-turner.png', { cache: 'no-store' });
+      if (!resp.ok) return;
+      const blob = await resp.blob();
+      const dataUrl = await new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(blob); });
+      const logoW = 60, logoH = logoW * (330/1120);
+      ensureSpace(logoH + 10);
+      doc.addImage(dataUrl, 'PNG', (215.9 - logoW) / 2, y, logoW, logoH);
+      y += logoH + 8;
+      doc.setDrawColor(220); doc.setLineWidth(.2);
+      doc.line(marginX, y, marginX + maxWidth, y);
+      y += 8;
+    } catch (e) { /* si no carga el logo, el contrato se genera igual sin el */ }
+  }
   function titulo(text) {
     doc.setFont('helvetica','bold'); doc.setFontSize(13);
     const lines = doc.splitTextToSize(text, maxWidth);
     lines.forEach(l => { ensureSpace(7); doc.text(l, 215.9/2, y, { align:'center' }); y += 6.5; });
-    y += 2;
+    y += 5;
     doc.setFont('helvetica','normal'); doc.setFontSize(9.3);
   }
   function parrafo(text) {
     const lines = doc.splitTextToSize(text, maxWidth);
-    lines.forEach(l => { ensureSpace(4.6); doc.text(l, marginX, y); y += 4.5; });
-    y += 2.5;
+    ensureSpace(lines.length * 4.5 + 4);
+    doc.text(text, marginX, y, { maxWidth, align: 'justify' });
+    y += lines.length * 4.5 + 4;
   }
   function tablaEntrega() {
     const filas = [
@@ -565,6 +603,7 @@ async function _generarPdf(d) {
     y += 3;
   }
 
+  await logoEncabezado();
   titulo('CONTRATO DE ARRENDAMIENTO DE BIEN MUEBLE (REMOLQUE)');
   construirClausulas(d).forEach(c => {
     if (c.t === 'titulo') return; // ya se imprimio como titulo()
@@ -669,7 +708,12 @@ async function enviarFirma() {
 
     if (rpcError || !ok) throw new Error(rpcError ? rpcError.message : 'El contrato ya había sido firmado.');
 
+    ULTIMO_PDF_BLOB = pdfBlob;
+    document.getElementById('firmado-titulo').textContent = '¡Contrato enviado con éxito!';
+    document.getElementById('firmado-mensaje').textContent = 'Tu contrato quedó registrado. Puedes verlo o descargar tu copia aquí abajo.';
+    document.getElementById('firmado-acciones').style.display = 'flex';
     mostrarEstado('estado-firmado');
+    try { _descargarContratoPdf(); } catch (e) { /* si el navegador bloquea la descarga automatica, quedan los botones */ }
   } catch (e) {
     console.error(e);
     const esErrorRed = /load failed|network|fetch|conexión|conexion/i.test(e.message || '');
