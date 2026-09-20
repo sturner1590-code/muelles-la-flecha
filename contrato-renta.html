@@ -327,10 +327,47 @@ function _progreso(msg) {
   el.textContent = msg;
 }
 
-async function _subirArchivo(file, path) {
-  const { error } = await sb.storage.from('rentas-docs').upload(path, file, { upsert: true, contentType: file.type || 'application/octet-stream' });
-  if (error) throw new Error('No se pudo subir ' + path + ': ' + error.message);
-  return path;
+/* Redimensiona/recomprime fotos antes de subir (las fotos de camara de celular
+   pesan varios MB y fallan facil en señal debil). Los PDF pasan sin tocar.
+   Si algo sale mal al comprimir, se sube el archivo original tal cual. */
+async function _comprimirImagenSiAplica(file) {
+  if (!file.type || !file.type.startsWith('image/')) return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const MAX_DIM = 1600;
+    let { width, height } = bitmap;
+    if (width > MAX_DIM || height > MAX_DIM) {
+      const scale = MAX_DIM / Math.max(width, height);
+      width = Math.round(width * scale);
+      height = Math.round(height * scale);
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = width; canvas.height = height;
+    canvas.getContext('2d').drawImage(bitmap, 0, 0, width, height);
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.82));
+    if (!blob || blob.size >= file.size) return file;
+    return new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' });
+  } catch (e) {
+    console.warn('No se pudo comprimir la imagen, se sube tal cual:', e);
+    return file;
+  }
+}
+
+/* Sube con 2 reintentos automaticos (comun en señal de celular debil) antes
+   de rendirse. */
+async function _subirArchivo(file, path, intentos = 2) {
+  let ultimoError;
+  for (let i = 0; i <= intentos; i++) {
+    try {
+      const { error } = await sb.storage.from('rentas-docs').upload(path, file, { upsert: true, contentType: file.type || 'application/octet-stream' });
+      if (!error) return path;
+      ultimoError = error;
+    } catch (e) {
+      ultimoError = e;
+    }
+    if (i < intentos) await new Promise(r => setTimeout(r, 1300));
+  }
+  throw new Error('No se pudo subir ' + path + ': ' + (ultimoError?.message || 'problema de conexión'));
 }
 
 async function _generarPdf(d) {
@@ -430,17 +467,24 @@ async function enviarFirma() {
   btn.disabled = true;
 
   try {
+    _progreso('Preparando documentos…');
+    const [fIneFrente, fIneReverso, fComprobante] = await Promise.all([
+      _comprimirImagenSiAplica(ARCHIVOS['f-ine-frente']),
+      _comprimirImagenSiAplica(ARCHIVOS['f-ine-reverso']),
+      _comprimirImagenSiAplica(ARCHIVOS['f-comprobante']),
+    ]);
+
     _progreso('Subiendo INE (frente)…');
-    const extFrente = (ARCHIVOS['f-ine-frente'].name.split('.').pop() || 'jpg');
-    const pathIneFrente = await _subirArchivo(ARCHIVOS['f-ine-frente'], `${TOKEN}/ine-frente.${extFrente}`);
+    const extFrente = (fIneFrente.name.split('.').pop() || 'jpg');
+    const pathIneFrente = await _subirArchivo(fIneFrente, `${TOKEN}/ine-frente.${extFrente}`);
 
     _progreso('Subiendo INE (reverso)…');
-    const extReverso = (ARCHIVOS['f-ine-reverso'].name.split('.').pop() || 'jpg');
-    const pathIneReverso = await _subirArchivo(ARCHIVOS['f-ine-reverso'], `${TOKEN}/ine-reverso.${extReverso}`);
+    const extReverso = (fIneReverso.name.split('.').pop() || 'jpg');
+    const pathIneReverso = await _subirArchivo(fIneReverso, `${TOKEN}/ine-reverso.${extReverso}`);
 
     _progreso('Subiendo comprobante de domicilio…');
-    const extComp = (ARCHIVOS['f-comprobante'].name.split('.').pop() || 'jpg');
-    const pathComprobante = await _subirArchivo(ARCHIVOS['f-comprobante'], `${TOKEN}/comprobante.${extComp}`);
+    const extComp = (fComprobante.name.split('.').pop() || 'jpg');
+    const pathComprobante = await _subirArchivo(fComprobante, `${TOKEN}/comprobante.${extComp}`);
 
     _progreso('Guardando tu firma…');
     const firmaDataUrl = canvas.toDataURL('image/png');
@@ -464,7 +508,10 @@ async function enviarFirma() {
     mostrarEstado('estado-firmado');
   } catch (e) {
     console.error(e);
-    alert('Ocurrió un problema al enviar tu contrato: ' + e.message + '\nPor favor intenta de nuevo.');
+    const esErrorRed = /load failed|network|fetch|conexión|conexion/i.test(e.message || '');
+    alert(esErrorRed
+      ? 'Se interrumpió tu conexión a internet mientras se enviaba tu contrato. Verifica tu señal (WiFi o datos) y presiona "Firmar y enviar contrato" otra vez — no necesitas volver a llenar nada.'
+      : ('Ocurrió un problema al enviar tu contrato: ' + e.message + '\nPor favor intenta de nuevo.'));
     btn.disabled = false;
     document.getElementById('progreso-envio').style.display = 'none';
   }
