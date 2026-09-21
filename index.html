@@ -4445,7 +4445,7 @@ function renderRentas() {
           <td class="hide-mobile" style="font-size:12px">${periodo}</td>
           <td>${badge(RENTA_ESTADO_LABELS, r.estado)}</td>
           <td class="hide-mobile">${fmt(r.montoRenta)}</td>
-          <td onclick="event.stopPropagation()"><button class="btn btn-danger btn-sm btn-icon" onclick="deleteRenta('${r.id}')">${icon('trash')}</button></td>
+          <td onclick="event.stopPropagation()">${r.estado === 'pendiente_firma' ? `<button class="btn btn-outline btn-sm btn-icon" onclick="editRenta('${r.id}')">${icon('edit')}</button>` : ''}<button class="btn btn-danger btn-sm btn-icon" onclick="deleteRenta('${r.id}')">${icon('trash')}</button></td>
         </tr>`;
       }).join('')
     : `<tr><td colspan="6" class="empty-state">Sin rentas registradas</td></tr>`;
@@ -4476,8 +4476,55 @@ function openNewRentaModal() {
   document.getElementById('renta-fecha-inicio').value = hoy;
   document.getElementById('renta-fecha-fin').value = hoy;
   document.getElementById('renta-hora-fin').value = '18:00';
-  ['renta-lugar-entrega','renta-monto-renta','renta-monto-deposito','renta-monto-pagare','renta-penalizacion','renta-uso-convenido'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('renta-uso-convenido').value = '';
+  document.getElementById('renta-lugar-entrega').value = 'Taller de Muelles y Mofles La Flecha';
+  document.getElementById('renta-monto-renta').value = 1000;
+  document.getElementById('renta-monto-deposito').value = 1500;
+  document.getElementById('renta-penalizacion').value = 1000;
+  document.getElementById('renta-monto-pagare').value = 60000;
   ['renta-ent-tiron','renta-ent-gato','renta-ent-electrico','renta-ent-llantas','renta-ent-muelles','renta-ent-piso','renta-ent-estructura'].forEach(id => document.getElementById(id).value = 'Bueno');
+  openModal('modal-renta');
+}
+
+function editRenta(id) {
+  const r = DB.rentas().find(r => r.id === id);
+  if (!r) return;
+  if (r.estado !== 'pendiente_firma') { toast('Solo se puede editar una renta que aún no ha sido firmada.', 'danger'); return; }
+
+  document.getElementById('renta-id').value = r.id;
+  document.getElementById('renta-modal-titulo').textContent = 'Editar Renta de Remolque';
+  const clienteInp = document.getElementById('renta-cliente');
+  const cliente = DB.clientes().find(c => c.id === r.clienteId);
+  clienteInp.value = cliente?.nombre || '';
+  clienteInp.dataset.clienteId = r.clienteId || '';
+  populateClienteSelect('renta-cliente', clienteInp.value);
+
+  const sel = document.getElementById('renta-remolque');
+  sel.innerHTML = DB.remolques().length
+    ? DB.remolques().map(m => {
+        const comp = m.estado === 'mantenimiento' ? { key: 'mantenimiento' } : estadoRemolqueComputado(m.id);
+        return `<option value="${m.id}">${esc(m.tipo)}${m.marcaModeloAnio ? ' — ' + esc(m.marcaModeloAnio) : ''} (${(REMOLQUE_ESTADO_LABELS[comp.key]||[])[1]||comp.key})</option>`;
+      }).join('')
+    : '<option value="">— Registra un remolque primero —</option>';
+  sel.value = r.remolqueId || '';
+
+  document.getElementById('renta-fecha-inicio').value = r.fechaInicio || '';
+  document.getElementById('renta-fecha-fin').value = r.fechaFin || '';
+  document.getElementById('renta-hora-fin').value = r.horaFin || '18:00';
+  document.getElementById('renta-lugar-entrega').value = r.lugarEntrega || '';
+  document.getElementById('renta-monto-renta').value = r.montoRenta || 0;
+  document.getElementById('renta-monto-deposito').value = r.montoDeposito || 0;
+  document.getElementById('renta-monto-pagare').value = r.montoPagare || 0;
+  document.getElementById('renta-penalizacion').value = r.penalizacionDiaria || 0;
+  document.getElementById('renta-uso-convenido').value = r.usoConvenido || '';
+  document.getElementById('renta-ent-tiron').value = r.entTiron || 'Bueno';
+  document.getElementById('renta-ent-gato').value = r.entGato || 'Bueno';
+  document.getElementById('renta-ent-electrico').value = r.entElectrico || 'Bueno';
+  document.getElementById('renta-ent-llantas').value = r.entLlantas || 'Bueno';
+  document.getElementById('renta-ent-muelles').value = r.entMuelles || 'Bueno';
+  document.getElementById('renta-ent-piso').value = r.entPiso || 'Bueno';
+  document.getElementById('renta-ent-estructura').value = r.entEstructura || 'Bueno';
+
   openModal('modal-renta');
 }
 
@@ -4564,6 +4611,7 @@ function viewRenta(id) {
         <div style="font-weight:600;margin-bottom:8px">Pendiente de firma</div>
         <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Envía este link al arrendatario por WhatsApp. Solo sirve para esta renta.</p>
         <button class="btn btn-primary" onclick="enviarContratoWhatsApp('${r.id}')" style="width:100%;justify-content:center;margin-bottom:8px">${icon('send')} Enviar contrato por WhatsApp</button>
+        <button class="btn btn-outline" onclick="closeModal('modal-renta-detalle');editRenta('${r.id}')" style="width:100%;justify-content:center;margin-bottom:8px">${icon('edit')} Editar datos del contrato</button>
         <div style="display:flex;gap:6px">
           <input class="form-control" readonly value="${esc(link)}" style="font-size:11px" onclick="this.select()">
           <button class="btn btn-outline btn-sm" onclick="navigator.clipboard.writeText('${link}').then(()=>toast('Link copiado.'))">Copiar</button>

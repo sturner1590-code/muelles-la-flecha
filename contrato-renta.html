@@ -282,21 +282,48 @@ function mostrarEstado(id) {
   });
 }
 
+/* Marca un valor como "dato editable/variable del contrato" para que se
+   muestre en negritas (nombre del cliente, fechas, montos, lugar de
+   entrega, etc.), a diferencia del texto fijo de la plantilla legal. */
+function b(v) { return { bold: true, text: String(v) }; }
+
+/* Convierte una clausula (string plano o arreglo de strings/b(...)) a una
+   lista uniforme de segmentos {text, bold}. */
+function _normSegs(v) {
+  if (typeof v === 'string') return [{ text: v, bold: false }];
+  return v.map(part => typeof part === 'string' ? { text: part, bold: false } : part);
+}
+
 /* Devuelve el arreglo de clausulas del contrato con los datos ya combinados.
    Se usa tanto para pintar el texto en pantalla como para generar el PDF,
-   asi ambos salen siempre identicos. */
+   asi ambos salen siempre identicos. Cada clausula puede ser un string
+   plano (sin negritas) o un arreglo mezclando texto normal con b(valor)
+   para los datos que varian de contrato a contrato. */
 function construirClausulas(d) {
   return [
     { t: 'titulo', v: 'CONTRATO DE ARRENDAMIENTO DE BIEN MUEBLE (REMOLQUE)' },
-    { t: 'parrafo', v: `Monclova, Coahuila, México — Fecha: ${fmtFechaLarga(d.fechaContrato)}` },
-    { t: 'parrafo', v: `Celebran el presente contrato, por una parte ${ARRENDADOR_NOMBRE} ("EL ARRENDADOR"), en su carácter de único propietario del bien mueble descrito; y por la otra parte ${d.nombre}, con domicilio en ${d.domicilio}, identificación oficial tipo ${d.identificacion} (fotografía anexa a este contrato) y teléfono ${d.telefono} ("EL ARRENDATARIO"). Ambas partes declaran tener capacidad legal y se obligan libremente conforme a las siguientes cláusulas.` },
-    { t: 'clausula', v: `PRIMERA. OBJETO Y PROPIEDAD. EL ARRENDADOR otorga en arrendamiento a EL ARRENDATARIO el bien mueble (el "Remolque"): tipo ${d.remolqueTipo||'—'}, capacidad de carga ${d.remolqueCapacidad||'—'} kg, marca/modelo/año ${d.remolqueMarcaModeloAnio||'—'}, número de serie ${d.remolqueSerie||'—'}, placas ${d.remolquePlacas||'—'}, color ${d.remolqueColor||'—'}, medidas ${d.remolqueMedidas||'—'}. EL ARRENDADOR conserva en todo momento la propiedad del Remolque; este contrato es exclusivamente de uso temporal y NO transmite dominio, posesión definitiva ni opción de compra alguna. EL ARRENDATARIO reconoce expresamente que el Remolque es propiedad de EL ARRENDADOR.` },
-    { t: 'clausula', v: `SEGUNDA. ESTADO DEL BIEN. EL ARRENDATARIO declara recibir el Remolque en buen estado de funcionamiento, según la columna "Al entregar", y se obliga a devolverlo en las mismas condiciones, salvo el desgaste normal por uso adecuado. La columna "Al recibir" se llenará al momento de la devolución:` },
+    { t: 'parrafo', v: ['Monclova, Coahuila, México — Fecha: ', b(fmtFechaLarga(d.fechaContrato))] },
+    { t: 'parrafo', v: [
+      'Celebran el presente contrato, por una parte ', ARRENDADOR_NOMBRE, ' ("EL ARRENDADOR"), en su carácter de único propietario del bien mueble descrito; y por la otra parte ',
+      b(d.nombre), ', con domicilio en ', b(d.domicilio), ', identificación oficial tipo ', b(d.identificacion), ' (fotografía anexa a este contrato) y teléfono ', b(d.telefono), ' ("EL ARRENDATARIO"). Ambas partes declaran tener capacidad legal y se obligan libremente conforme a las siguientes cláusulas.',
+    ] },
+    { t: 'clausula', v: [
+      'PRIMERA. OBJETO Y PROPIEDAD. EL ARRENDADOR otorga en arrendamiento a EL ARRENDATARIO el bien mueble (el "Remolque"): tipo ', b(d.remolqueTipo||'—'), ', capacidad de carga ', b((d.remolqueCapacidad||'—') + ' kg'), ', marca/modelo/año ', b(d.remolqueMarcaModeloAnio||'—'), ', número de serie ', b(d.remolqueSerie||'—'), ', placas ', b(d.remolquePlacas||'—'), ', color ', b(d.remolqueColor||'—'), ', medidas ', b(d.remolqueMedidas||'—'), '. EL ARRENDADOR conserva en todo momento la propiedad del Remolque; este contrato es exclusivamente de uso temporal y NO transmite dominio, posesión definitiva ni opción de compra alguna. EL ARRENDATARIO reconoce expresamente que el Remolque es propiedad de EL ARRENDADOR.',
+    ] },
+    { t: 'clausula', v: 'SEGUNDA. ESTADO DEL BIEN. EL ARRENDATARIO declara recibir el Remolque en buen estado de funcionamiento, según la columna "Al entregar", y se obliga a devolverlo en las mismas condiciones, salvo el desgaste normal por uso adecuado. La columna "Al recibir" se llenará al momento de la devolución:' },
     { t: 'tabla-entrega' },
-    { t: 'clausula', v: `TERCERA. PLAZO Y DEVOLUCIÓN. El arrendamiento inicia el ${fmtFechaLarga(d.fechaInicio)} y concluye el ${fmtFechaLarga(d.fechaFin)} a las ${d.horaFin||'—'} hrs., momento en que el Remolque deberá devolverse en ${d.lugarEntrega||'—'}. El retraso en la devolución causará una pena convencional de ${fmtMoney(d.penalizacionDiaria)} por cada día o fracción, sin perjuicio de las demás acciones que correspondan a EL ARRENDADOR.` },
-    { t: 'clausula', v: `CUARTA. RENTA Y DEPÓSITO. La renta pactada es de ${fmtMoney(d.montoRenta)} (${d.montoRentaLetra}), pagadera por adelantado. EL ARRENDATARIO entrega un depósito en garantía de ${fmtMoney(d.montoDeposito)}, que EL ARRENDADOR podrá aplicar a retrasos, daños, faltantes, multas o cualquier adeudo derivado de este contrato; el remanente, de existir, se devolverá al término del arrendamiento previa verificación del Remolque.` },
-    { t: 'clausula', v: `QUINTA. GARANTÍA (PAGARÉ). Como garantía del cumplimiento, EL ARRENDATARIO suscribe a favor de EL ARRENDADOR un pagaré único por la cantidad de ${fmtMoney(d.montoPagare)} (${d.montoPagareLetra}), que se hará efectivo en caso de destrucción, siniestro, robo, pérdida, menoscabo o cualquier daño del Remolque, así como por falta de pago o incumplimiento. De no actualizarse ninguno de estos supuestos, el pagaré será devuelto al concluir el arrendamiento y verificado el buen estado del Remolque.` },
-    { t: 'clausula', v: `SEXTA. USO Y OBLIGACIONES DEL ARRENDATARIO. El Remolque se destinará únicamente a ${d.usoConvenido||'uso general de carga'}, sin exceder su capacidad. EL ARRENDATARIO se obliga a: (a) usarlo con diligencia y conforme a la ley; (b) NO subarrendarlo, prestarlo, ceder ni gravar los derechos de este contrato; (c) NO modificarlo ni repararlo sin autorización escrita de EL ARRENDADOR; (d) cubrir combustible, casetas, maniobras y mantenimiento durante la vigencia; (e) contar con los permisos, licencias y seguros necesarios para su circulación y carga.` },
+    { t: 'clausula', v: [
+      'TERCERA. PLAZO Y DEVOLUCIÓN. El arrendamiento inicia el ', b(fmtFechaLarga(d.fechaInicio)), ' y concluye el ', b(fmtFechaLarga(d.fechaFin)), ' a las ', b((d.horaFin||'—') + ' hrs.'), ', momento en que el Remolque deberá devolverse en ', b(d.lugarEntrega||'—'), '. El retraso en la devolución causará una pena convencional de ', b(fmtMoney(d.penalizacionDiaria)), ' por cada día o fracción, sin perjuicio de las demás acciones que correspondan a EL ARRENDADOR.',
+    ] },
+    { t: 'clausula', v: [
+      'CUARTA. RENTA Y DEPÓSITO. La renta pactada es de ', b(fmtMoney(d.montoRenta) + ' (' + d.montoRentaLetra + ')'), ', pagadera por adelantado. EL ARRENDATARIO entrega un depósito en garantía de ', b(fmtMoney(d.montoDeposito)), ', que EL ARRENDADOR podrá aplicar a retrasos, daños, faltantes, multas o cualquier adeudo derivado de este contrato; el remanente, de existir, se devolverá al término del arrendamiento previa verificación del Remolque.',
+    ] },
+    { t: 'clausula', v: [
+      'QUINTA. GARANTÍA (PAGARÉ). Como garantía del cumplimiento, EL ARRENDATARIO suscribe a favor de EL ARRENDADOR un pagaré único por la cantidad de ', b(fmtMoney(d.montoPagare) + ' (' + d.montoPagareLetra + ')'), ', que se hará efectivo en caso de destrucción, siniestro, robo, pérdida, menoscabo o cualquier daño del Remolque, así como por falta de pago o incumplimiento. De no actualizarse ninguno de estos supuestos, el pagaré será devuelto al concluir el arrendamiento y verificado el buen estado del Remolque.',
+    ] },
+    { t: 'clausula', v: [
+      'SEXTA. USO Y OBLIGACIONES DEL ARRENDATARIO. El Remolque se destinará únicamente a ', b(d.usoConvenido||'uso general de carga'), ', sin exceder su capacidad. EL ARRENDATARIO se obliga a: (a) usarlo con diligencia y conforme a la ley; (b) NO subarrendarlo, prestarlo, ceder ni gravar los derechos de este contrato; (c) NO modificarlo ni repararlo sin autorización escrita de EL ARRENDADOR; (d) cubrir combustible, casetas, maniobras y mantenimiento durante la vigencia; (e) contar con los permisos, licencias y seguros necesarios para su circulación y carga.',
+    ] },
     { t: 'clausula', v: `SÉPTIMA. RIESGO Y RESPONSABILIDAD. Desde la entrega y hasta la devolución, EL ARRENDATARIO asume TODO riesgo sobre el Remolque y responde de manera EXCLUSIVA por daños, pérdida, robo, accidentes, así como por daños a terceros, a la carga transportada, a personas o bienes, y por las consecuencias penales, fiscales, civiles o administrativas derivadas de su uso. EL ARRENDADOR NO será responsable por dichos hechos ni por los bienes o valores propiedad de EL ARRENDATARIO o de terceros transportados en el Remolque. El caso fortuito o la fuerza mayor NO liberan a EL ARRENDATARIO de la obligación de devolver el Remolque o de indemnizar su valor conforme a la Cláusula Quinta.` },
     { t: 'clausula', v: `OCTAVA. RESCISIÓN Y RECUPERACIÓN. EL ARRENDADOR podrá rescindir este contrato y exigir la devolución inmediata del Remolque, sin necesidad de declaración judicial previa, por falta de pago, uso indebido o incumplimiento de cualquier obligación. En tales casos, EL ARRENDATARIO autoriza a EL ARRENDADOR a recuperar el Remolque donde se encuentre, sin que ello genere responsabilidad alguna para EL ARRENDADOR.` },
     { t: 'clausula', v: `NOVENA. LEGISLACIÓN Y JURISDICCIÓN. Este contrato se rige por los artículos 2918 al 2938 del Código Civil del Estado de Coahuila, supletorio del Código de Comercio vigente. Para su interpretación y cumplimiento, las partes se someten a los tribunales competentes de la ciudad de Monclova, Coahuila, renunciando a cualquier otro fuero que pudiera corresponderles por razón de domicilio presente o futuro.` },
@@ -320,7 +347,8 @@ function pintarContrato(d) {
         filas.map(([label, val]) => `<tr><td>${esc(label)}</td><td>${esc(val)||'—'}</td></tr>`).join('') +
         `</tbody></table>`;
     } else {
-      html += `<p class="clause">${esc(c.v)}</p>`;
+      const segs = _normSegs(c.v);
+      html += `<p class="clause">${segs.map(s => s.bold ? `<strong>${esc(s.text)}</strong>` : esc(s.text)).join('')}</p>`;
     }
   });
   document.getElementById('contrato-texto').innerHTML = html;
@@ -576,11 +604,67 @@ async function _generarPdf(d) {
     y += 5;
     doc.setFont('helvetica','normal'); doc.setFontSize(9.3);
   }
-  function parrafo(text) {
-    const lines = doc.splitTextToSize(text, maxWidth);
-    ensureSpace(lines.length * 4.5 + 4);
-    doc.text(text, marginX, y, { maxWidth, align: 'justify' });
-    y += lines.length * 4.5 + 4;
+  // doc.getTextWidth() de jsPDF mide algunas palabras especificas mas angostas
+  // de lo que realmente ocupan al dibujarlas (bug de kerning interno de jsPDF
+  // confirmado con pruebas dirigidas: por ejemplo "ARRENDATARIO" media ~0.8mm
+  // menos de su ancho real). Sumar el ancho de cada caracter por separado da
+  // una medida fiel al dibujo real y evita que la siguiente palabra quede
+  // pegada sin espacio visible.
+  function _anchoPalabra(text) {
+    let w = 0;
+    for (const ch of text) w += doc.getTextWidth(ch);
+    return w;
+  }
+  function parrafo(v) {
+    const lineH = 4.5;
+    doc.setFont('helvetica', 'normal');
+    const spaceW = doc.getTextWidth(' ');
+
+    // Palabra por palabra (con su propio estilo normal/negrita) para poder
+    // justificar el texto sin perder las negritas de los datos variables.
+    const words = [];
+    _normSegs(v).forEach(seg => {
+      seg.text.split(/\s+/).filter(Boolean).forEach(w => words.push({ text: w, bold: seg.bold }));
+    });
+    if (!words.length) return;
+
+    const lines = [];
+    let cur = [], curWidth = 0;
+    words.forEach(w => {
+      doc.setFont('helvetica', w.bold ? 'bold' : 'normal');
+      const ww = _anchoPalabra(w.text);
+      const addW = (cur.length ? spaceW : 0) + ww;
+      if (cur.length && curWidth + addW > maxWidth) {
+        lines.push(cur);
+        cur = [{ text: w.text, bold: w.bold, w: ww }];
+        curWidth = ww;
+      } else {
+        cur.push({ text: w.text, bold: w.bold, w: ww });
+        curWidth += addW;
+      }
+    });
+    if (cur.length) lines.push(cur);
+
+    lines.forEach((line, idx) => {
+      ensureSpace(lineH + 0.3);
+      const isLast = idx === lines.length - 1;
+      const wordsWidth = line.reduce((sum, w) => sum + w.w, 0);
+      const gaps = line.length - 1;
+      let gapWidth = spaceW;
+      if (!isLast && gaps > 0) {
+        const extra = maxWidth - wordsWidth - gaps * spaceW;
+        if (extra > 0) gapWidth = spaceW + extra / gaps;
+      }
+      let x = marginX;
+      line.forEach((w, i) => {
+        doc.setFont('helvetica', w.bold ? 'bold' : 'normal');
+        doc.text(w.text, x, y);
+        x += w.w + (i < line.length - 1 ? gapWidth : 0);
+      });
+      y += lineH;
+    });
+    doc.setFont('helvetica', 'normal');
+    y += 4;
   }
   function tablaEntrega() {
     const filas = [
