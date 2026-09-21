@@ -1000,7 +1000,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('modal-cotizacion')">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveCotizacion()">Guardar Cotización</button>
+      <button class="btn btn-primary" id="btn-guardar-cotizacion" onclick="saveCotizacion()">Guardar Cotización</button>
     </div>
   </div>
 </div>
@@ -1561,42 +1561,65 @@ const DB = {
   remolques:    () => CACHE.remolques,
   rentas:       () => CACHE.rentas,
 
-  /* Sincroniza cambios con Supabase en segundo plano (fire-and-forget) */
+  /* Sincroniza cambios con Supabase en segundo plano. IMPORTANTE: solo envia
+     los registros que realmente cambiaron (comparando contra "oldData", la
+     foto de CACHE justo antes de este guardado) o que son nuevos -- NUNCA
+     reenvia registros que no se tocaron localmente. Esto es critico: si se
+     enviara siempre el arreglo completo, guardar UNA orden reescribiria
+     tambien cualquier OTRA orden cuya copia local estuviera desactualizada
+     (por ejemplo si el tiempo real no habia llegado todavia en esta
+     computadora), borrando por accidente cambios recientes hechos desde
+     otra computadora. Devuelve una promesa {ok, errors} para que quien
+     necesite confirmar que se guardo de verdad (antes de cerrar un modal)
+     pueda esperarla; quien no la espere sigue funcionando igual que antes
+     (fire-and-forget). */
   _push(table, newData, oldData) {
+    const oldMap     = new Map((oldData || []).map(i => [i.id, i]));
     const newIds     = new Set(newData.map(i => i.id));
     const deletedIds = (oldData || []).map(i => i.id).filter(id => !newIds.has(id));
-    if (newData.length > 0) {
+    const changed    = newData.filter(item => {
+      const prev = oldMap.get(item.id);
+      return !prev || JSON.stringify(prev) !== JSON.stringify(item);
+    });
+
+    const promises = [];
+    if (changed.length > 0) {
       const BATCH = 500;
-      for (let i = 0; i < newData.length; i += BATCH) {
-        const chunk = newData.slice(i, i + BATCH);
-        sb.from(table).upsert(chunk)
-          .then(({ error }) => {
-            if (error) {
-              console.error('[Supabase upsert]', table, i, error.message);
-              toast(`⚠️ Error al guardar en ${table}: ${error.message}`, 'danger');
-            }
-          });
+      for (let i = 0; i < changed.length; i += BATCH) {
+        const chunk = changed.slice(i, i + BATCH);
+        promises.push(sb.from(table).upsert(chunk).then(({ error }) => {
+          if (error) {
+            console.error('[Supabase upsert]', table, i, error.message);
+            toast(`⚠️ Error al guardar en ${table}: ${error.message}`, 'danger');
+          }
+          return error;
+        }));
       }
     }
     deletedIds.forEach(id => {
-      sb.from(table).delete().eq('id', id)
-        .then(({ error }) => {
-          if (error) {
-            console.error('[Supabase delete]', table, error.message);
-            toast(`⚠️ Error al eliminar en ${table}: ${error.message}`, 'danger');
-          }
-        });
+      promises.push(sb.from(table).delete().eq('id', id).then(({ error }) => {
+        if (error) {
+          console.error('[Supabase delete]', table, error.message);
+          toast(`⚠️ Error al eliminar en ${table}: ${error.message}`, 'danger');
+        }
+        return error;
+      }));
+    });
+
+    return Promise.all(promises).then(errs => {
+      const errors = errs.filter(Boolean);
+      return { ok: errors.length === 0, errors };
     });
   },
 
-  saveClientes(v)      { const o = CACHE.clientes;      CACHE.clientes = v;      DB._push('clientes', v, o); },
-  saveVehiculos(v)     { const o = CACHE.vehiculos;     CACHE.vehiculos = v;     DB._push('vehiculos', v, o); },
-  saveOrdenes(v)       { const o = CACHE.ordenes;       CACHE.ordenes = v;       DB._push('ordenes', v, o); },
-  saveParts(v)         { DB.saveRefacciones(v); },
-  saveRefacciones(v)   { const o = CACHE.refacciones;   CACHE.refacciones = v;   DB._push('refacciones', v, o); },
-  saveCotizaciones(v)  { const o = CACHE.cotizaciones;  CACHE.cotizaciones = v;  DB._push('cotizaciones', v, o); },
-  saveRemolques(v)     { const o = CACHE.remolques;     CACHE.remolques = v;     DB._push('remolques', v, o); },
-  saveRentas(v)        { const o = CACHE.rentas;        CACHE.rentas = v;        DB._push('rentas', v, o); },
+  saveClientes(v)      { const o = CACHE.clientes;      CACHE.clientes = v;      return DB._push('clientes', v, o); },
+  saveVehiculos(v)     { const o = CACHE.vehiculos;     CACHE.vehiculos = v;     return DB._push('vehiculos', v, o); },
+  saveOrdenes(v)       { const o = CACHE.ordenes;       CACHE.ordenes = v;       return DB._push('ordenes', v, o); },
+  saveParts(v)         { return DB.saveRefacciones(v); },
+  saveRefacciones(v)   { const o = CACHE.refacciones;   CACHE.refacciones = v;   return DB._push('refacciones', v, o); },
+  saveCotizaciones(v)  { const o = CACHE.cotizaciones;  CACHE.cotizaciones = v;  return DB._push('cotizaciones', v, o); },
+  saveRemolques(v)     { const o = CACHE.remolques;     CACHE.remolques = v;     return DB._push('remolques', v, o); },
+  saveRentas(v)        { const o = CACHE.rentas;        CACHE.rentas = v;        return DB._push('rentas', v, o); },
 };
 
 /* SEED — solo si las tablas están vacías en Supabase */
@@ -1739,6 +1762,8 @@ let importData = [];
 let currentOrdenLineas = [];
 let ordenRefaccionesMap = {};
 let currentOrdenFotos = []; // { path: string|null (ya subida a Storage), file: File|null (pendiente de subir), previewUrl }
+let _ordenEditandoBaseline = null; // { id, actualizadoEn } de la orden tal como estaba al abrir el formulario
+let _cotizacionEditandoBaseline = null; // igual que arriba, para cotizaciones
 
 /* ═══════════════════════════════════════════════════════════════ EVIDENCIA FOTOGRÁFICA (ÓRDENES) */
 const ORDEN_FOTOS_BUCKET = 'ordenes-evidencia';
@@ -3203,6 +3228,7 @@ function openNewOrdenModal() {
   calculateOrderTotals();
   currentOrdenFotos = [];
   renderOrdenFotosGrid();
+  _ordenEditandoBaseline = null;
   openModal('modal-orden');
 }
 
@@ -3434,6 +3460,7 @@ function editOrden(id) {
   calculateOrderTotals();
   currentOrdenFotos = (o.evidenciaFotografica || []).map(path => ({ path, file: null, previewUrl: ordenFotoPublicUrl(path) }));
   renderOrdenFotosGrid();
+  _ordenEditandoBaseline = { id: o.id, actualizadoEn: o.actualizadoEn || null };
   openModal('modal-orden');
 }
 
@@ -3447,6 +3474,23 @@ async function saveOrden() {
   }
 
   const btnGuardar = document.getElementById('btn-guardar-orden');
+  const id = document.getElementById('orden-id').value;
+
+  // Si otra persona guardo un cambio en ESTA MISMA orden despues de que la
+  // abriste, se avisa antes de sobrescribir (evita perder su trabajo sin que
+  // te des cuenta). Si no se puede verificar (ej. sin conexion), se sigue
+  // adelante -- la proteccion principal contra sobrescribir OTRAS ordenes ya
+  // esta en DB._push(), que solo envia lo que realmente cambio.
+  if (id && _ordenEditandoBaseline && _ordenEditandoBaseline.id === id) {
+    try {
+      const { data: actual } = await sb.from('ordenes').select('actualizadoEn').eq('id', id).maybeSingle();
+      if (actual && _ordenEditandoBaseline.actualizadoEn && actual.actualizadoEn !== _ordenEditandoBaseline.actualizadoEn) {
+        const continuar = confirm('⚠️ Esta orden fue modificada por otra persona mientras la tenías abierta.\n\nSi continúas, TUS cambios sobrescribirán los de esa otra persona.\n\nAceptar = guardar de todas formas.\nCancelar = no guardar (cierra sin guardar y vuelve a abrir la orden para ver lo más reciente).');
+        if (!continuar) return;
+      }
+    } catch (e) { console.warn('[chequeo de conflicto]', e); }
+  }
+
   if (btnGuardar) { btnGuardar.disabled = true; btnGuardar.textContent = 'Guardando…'; }
   let evidenciaFotografica;
   try {
@@ -3457,7 +3501,6 @@ async function saveOrden() {
     return;
   }
 
-  const id = document.getElementById('orden-id').value;
   let rows = DB.ordenes();
   const totalMat = currentOrdenLineas.reduce((s,l)=>s+(+l.subtotal||0),0);
   const estado   = document.getElementById('orden-estado').value;
@@ -3478,14 +3521,22 @@ async function saveOrden() {
     evidenciaFotografica,
     pendientePago: document.getElementById('orden-pendiente-pago').checked,
     pendienteFacturar: document.getElementById('orden-pendiente-facturar').checked,
-    creadoEn, iniciadoEn, completadoEn
+    creadoEn, iniciadoEn, completadoEn,
+    actualizadoEn: now,
   };
   if (id) rows = rows.map(o=>o.id===id?obj:o);
   else rows.push(obj);
-  DB.saveOrdenes(rows);
+
+  const resultado = await DB.saveOrdenes(rows);
+  if (btnGuardar) { btnGuardar.disabled = false; btnGuardar.textContent = 'Guardar Orden'; }
+
+  if (!resultado.ok) {
+    alert('⚠️ NO SE GUARDÓ LA ORDEN\n\nHubo un problema al guardar en el servidor (por ejemplo, tu sesión pudo haber expirado). Tus datos siguen aquí en el formulario, no se perdieron.\n\nCierra sesión y vuelve a entrar si el problema sigue, luego presiona "Guardar Orden" otra vez.');
+    return;
+  }
+
   closeModal('modal-orden');
   renderOrdenes();
-  if (btnGuardar) { btnGuardar.disabled = false; btnGuardar.textContent = 'Guardar Orden'; }
   toast(id?'Orden actualizada.':'Orden creada.');
 }
 
@@ -4033,6 +4084,7 @@ function openNewCotizacionModal() {
   currentCotizacionLineas = [];
   renderCotizacionRefaccionesTable();
   calculateCotizacionTotals();
+  _cotizacionEditandoBaseline = null;
   openModal('modal-cotizacion');
 }
 
@@ -4221,11 +4273,25 @@ function selectCotizacionRefaccionFromDatalist(idx) {
   else     { input.dataset.refaccionId = ''; }
 }
 
-function saveCotizacion() {
+async function saveCotizacion() {
   const clienteId  = resolveClienteId('cotizacion-cliente');
   const vehInput   = document.getElementById('cotizacion-vehiculo');
   const vehiculoId = vehInput.dataset.vehiculoId || (vehInput.value === 'Sin vehículo' ? 'NA' : vehInput.value);
   const id       = document.getElementById('cotizacion-id').value;
+
+  if (id && _cotizacionEditandoBaseline && _cotizacionEditandoBaseline.id === id) {
+    try {
+      const { data: actual } = await sb.from('cotizaciones').select('actualizadoEn').eq('id', id).maybeSingle();
+      if (actual && _cotizacionEditandoBaseline.actualizadoEn && actual.actualizadoEn !== _cotizacionEditandoBaseline.actualizadoEn) {
+        const continuar = confirm('⚠️ Esta cotización fue modificada por otra persona mientras la tenías abierta.\n\nSi continúas, TUS cambios sobrescribirán los de esa otra persona.\n\nAceptar = guardar de todas formas.\nCancelar = no guardar (cierra sin guardar y vuelve a abrir la cotización para ver lo más reciente).');
+        if (!continuar) return;
+      }
+    } catch (e) { console.warn('[chequeo de conflicto]', e); }
+  }
+
+  const btnGuardar = document.getElementById('btn-guardar-cotizacion');
+  if (btnGuardar) { btnGuardar.disabled = true; btnGuardar.textContent = 'Guardando…'; }
+
   let rows       = DB.cotizaciones();
   const existing = id ? rows.find(c => c.id === id) : null;
   const now      = new Date().toISOString();
@@ -4236,11 +4302,20 @@ function saveCotizacion() {
     lineas: currentCotizacionLineas,
     totalMaterial: totalMat,
     notas: document.getElementById('cotizacion-notas').value.trim(),
-    creadoEn: existing?.creadoEn || now
+    creadoEn: existing?.creadoEn || now,
+    actualizadoEn: now,
   };
   if (id) rows = rows.map(c => c.id === id ? obj : c);
   else    rows.push(obj);
-  DB.saveCotizaciones(rows);
+
+  const resultado = await DB.saveCotizaciones(rows);
+  if (btnGuardar) { btnGuardar.disabled = false; btnGuardar.textContent = 'Guardar Cotización'; }
+
+  if (!resultado.ok) {
+    alert('⚠️ NO SE GUARDÓ LA COTIZACIÓN\n\nHubo un problema al guardar en el servidor (por ejemplo, tu sesión pudo haber expirado). Tus datos siguen aquí en el formulario, no se perdieron.\n\nCierra sesión y vuelve a entrar si el problema sigue, luego presiona "Guardar Cotización" otra vez.');
+    return;
+  }
+
   closeModal('modal-cotizacion');
   renderCotizaciones();
   toast(id ? 'Cotización actualizada.' : 'Cotización creada.');
@@ -4283,6 +4358,7 @@ function editCotizacion(id) {
   currentCotizacionLineas = JSON.parse(JSON.stringify(c.lineas || []));
   renderCotizacionRefaccionesTable();
   calculateCotizacionTotals();
+  _cotizacionEditandoBaseline = { id: c.id, actualizadoEn: c.actualizadoEn || null };
   openModal('modal-cotizacion');
 }
 
@@ -5005,6 +5081,46 @@ function initRealtime() {
       .subscribe();
   });
 }
+
+/* Respaldo del tiempo real: el canal de Supabase Realtime a veces se
+   desconecta en silencio (ej. la computadora estuvo en suspension, sin
+   señal, o la pestaña estuvo mucho tiempo en segundo plano) y dos personas
+   pueden terminar viendo datos desactualizados sin darse cuenta. Como
+   respaldo, se vuelve a cargar todo desde Supabase cada vez que la pestaña
+   recupera el foco y, ademas, cada pocos minutos mientras este abierta. */
+let _ultimoRefrescoFallback = 0;
+async function _refrescarDatosFallback() {
+  const ahora = Date.now();
+  if (ahora - _ultimoRefrescoFallback < 15000) return; // evita refrescos duplicados muy seguidos
+  _ultimoRefrescoFallback = ahora;
+  try {
+    const [c, v, o, r, cot, rem, ren] = await Promise.all([
+      _loadAll('clientes'), _loadAll('vehiculos'), _loadAll('ordenes'), _loadAll('refacciones'),
+      _loadAll('cotizaciones'), _loadAll('remolques'), _loadAll('rentas'),
+    ]);
+    if (!c.error)   CACHE.clientes     = c.data;
+    if (!v.error)   CACHE.vehiculos    = v.data;
+    if (!o.error)   CACHE.ordenes      = o.data;
+    if (!r.error)   CACHE.refacciones  = r.data;
+    if (!cot.error) CACHE.cotizaciones = cot.data;
+    if (!rem.error) CACHE.remolques    = rem.data;
+    if (!ren.error) CACHE.rentas       = ren.data;
+
+    const activePage = document.querySelector('.page.active')?.id?.replace('page-', '');
+    const RENDER_BY_PAGE = {
+      dashboard: renderDashboard, clientes: renderClientes, vehiculos: renderVehiculos,
+      ordenes: renderOrdenes, inventario: renderInventario, cotizaciones: renderCotizaciones,
+      remolques: renderRemolques, rentas: renderRentas, 'por-cobrar': renderPorCobrar,
+    };
+    RENDER_BY_PAGE[activePage]?.();
+  } catch (e) {
+    console.warn('[refrescoFallback]', e);
+  }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && _appBooted) _refrescarDatosFallback();
+});
+setInterval(() => { if (_appBooted) _refrescarDatosFallback(); }, 3 * 60 * 1000);
 
 /* ═══════════════════════════════════════════════════════════════ INIT */
 document.addEventListener('keydown', e => {
