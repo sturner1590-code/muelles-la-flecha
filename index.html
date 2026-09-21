@@ -4538,6 +4538,20 @@ function saveRenta() {
     toast('Cliente, remolque, fechas y monto de renta son requeridos.', 'danger'); return;
   }
   const id = document.getElementById('renta-id').value;
+
+  // No permitir guardar si el remolque ya tiene OTRO contrato FIRMADO cuyo
+  // periodo se cruza con las fechas elegidas (evita rentar dos veces el
+  // mismo remolque para las mismas fechas).
+  const conflicto = DB.rentas().find(r =>
+    r.remolqueId === remolqueId && r.estado === 'activo' && r.id !== id &&
+    fechaInicio <= (r.fechaFin || r.fechaInicio) && r.fechaInicio <= fechaFin
+  );
+  if (conflicto) {
+    const remolque = DB.remolques().find(m => m.id === remolqueId);
+    alert(`⚠️ FECHA NO DISPONIBLE\n\nEl remolque${remolque ? ' "' + remolque.tipo + '"' : ''} ya está rentado a ${getClienteName(conflicto.clienteId)} del ${fmtDate(conflicto.fechaInicio)} al ${fmtDate(conflicto.fechaFin)}.\n\nElige otras fechas o un remolque distinto. No se guardó esta renta.`);
+    return;
+  }
+
   let rows = DB.rentas();
   const existing = id ? rows.find(r => r.id === id) : null;
   const montoDeposito = +document.getElementById('renta-monto-deposito').value || 0;
