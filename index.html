@@ -1791,7 +1791,13 @@ function esc(s) {
 }
 function fmtDate(iso) {
   if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('es-MX', {day:'2-digit',month:'short',year:'numeric'});
+  // Fechas puras 'YYYY-MM-DD' (sin hora) se arman con los componentes
+  // numericos directamente -- si se le pasan a "new Date(iso)" tal cual,
+  // JS las interpreta como medianoche UTC y, en un huso horario detras de
+  // UTC (como Mexico), al mostrarlas en hora local aparecen un dia antes.
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  const d = m ? new Date(+m[1], +m[2]-1, +m[3]) : new Date(iso);
+  return d.toLocaleDateString('es-MX', {day:'2-digit',month:'short',year:'numeric'});
 }
 function fmtDateTime(iso) {
   if (!iso) return '—';
