@@ -573,7 +573,7 @@
         </div>
       </div>
       <div class="table-wrap">
-        <table><thead><tr><th>Tipo</th><th class="hide-mobile">Marca/Modelo/Año</th><th class="hide-mobile">Placas</th><th>Estado</th><th class="hide-mobile">Vigencia</th><th>Acciones</th></tr></thead>
+        <table><thead><tr><th>Tipo</th><th class="hide-mobile">Marca/Modelo/Año</th><th class="hide-mobile">Placas</th><th class="hide-mobile">Capacidad</th><th class="hide-mobile">Color</th><th>Estado</th><th class="hide-mobile">Vigencia</th><th>Acciones</th></tr></thead>
           <tbody id="tbody-remolques"></tbody></table>
       </div>
     </section>
@@ -4307,12 +4307,14 @@ function renderRemolques() {
         <td><strong>${esc(m.tipo)}</strong></td>
         <td class="hide-mobile">${esc(m.marcaModeloAnio)||'—'}</td>
         <td class="hide-mobile">${esc(m.placas)||'—'}</td>
+        <td class="hide-mobile">${m.capacidad ? esc(m.capacidad) + ' kg' : '—'}</td>
+        <td class="hide-mobile">${esc(m.color)||'—'}</td>
         <td>${badge(REMOLQUE_ESTADO_LABELS, comp.key)}</td>
         <td class="hide-mobile" style="font-size:12px">${vigencia}</td>
         <td><button class="btn btn-outline btn-sm btn-icon" onclick="editRemolque('${m.id}')">${icon('edit')}</button><button class="btn btn-danger btn-sm btn-icon" onclick="deleteRemolque('${m.id}')">${icon('trash')}</button></td>
       </tr>`;
       }).join('')
-    : `<tr><td colspan="6" class="empty-state">Sin remolques registrados</td></tr>`;
+    : `<tr><td colspan="8" class="empty-state">Sin remolques registrados</td></tr>`;
 }
 
 function openNewRemolqueModal() {
@@ -4465,6 +4467,21 @@ function selectRentaClienteFromDatalist() {
   else input.dataset.clienteId = '';
 }
 
+/* Etiqueta del remolque para el selector al crear/editar una renta. Muestra
+   capacidad y color (en vez de marca/modelo, que casi siempre dice
+   "Remolques Turner" para todos) para poder diferenciar facilmente entre
+   varios remolques parecidos. */
+function _remolqueSelectLabel(m) {
+  const comp = m.estado === 'mantenimiento' ? { key: 'mantenimiento' } : estadoRemolqueComputado(m.id);
+  const datos = [
+    m.capacidad ? `${m.capacidad} kg` : null,
+    m.color || null,
+    m.placas || null,
+  ].filter(Boolean).join(', ');
+  const estadoLabel = (REMOLQUE_ESTADO_LABELS[comp.key]||[])[1]||comp.key;
+  return `${esc(m.tipo)}${datos ? ' — ' + esc(datos) : ''} (${estadoLabel})`;
+}
+
 function openNewRentaModal() {
   document.getElementById('renta-id').value = '';
   document.getElementById('renta-modal-titulo').textContent = 'Nueva Renta de Remolque';
@@ -4473,10 +4490,7 @@ function openNewRentaModal() {
   populateClienteSelect('renta-cliente', '');
   const sel = document.getElementById('renta-remolque');
   sel.innerHTML = DB.remolques().length
-    ? DB.remolques().map(m => {
-        const comp = m.estado === 'mantenimiento' ? { key: 'mantenimiento' } : estadoRemolqueComputado(m.id);
-        return `<option value="${m.id}">${esc(m.tipo)}${m.marcaModeloAnio ? ' — ' + esc(m.marcaModeloAnio) : ''} (${(REMOLQUE_ESTADO_LABELS[comp.key]||[])[1]||comp.key})</option>`;
-      }).join('')
+    ? DB.remolques().map(m => `<option value="${m.id}">${_remolqueSelectLabel(m)}</option>`).join('')
     : '<option value="">— Registra un remolque primero —</option>';
   const hoy = new Date().toISOString().slice(0,10);
   document.getElementById('renta-fecha-inicio').value = hoy;
@@ -4507,10 +4521,7 @@ function editRenta(id) {
 
   const sel = document.getElementById('renta-remolque');
   sel.innerHTML = DB.remolques().length
-    ? DB.remolques().map(m => {
-        const comp = m.estado === 'mantenimiento' ? { key: 'mantenimiento' } : estadoRemolqueComputado(m.id);
-        return `<option value="${m.id}">${esc(m.tipo)}${m.marcaModeloAnio ? ' — ' + esc(m.marcaModeloAnio) : ''} (${(REMOLQUE_ESTADO_LABELS[comp.key]||[])[1]||comp.key})</option>`;
-      }).join('')
+    ? DB.remolques().map(m => `<option value="${m.id}">${_remolqueSelectLabel(m)}</option>`).join('')
     : '<option value="">— Registra un remolque primero —</option>';
   sel.value = r.remolqueId || '';
 
