@@ -1552,14 +1552,24 @@ _mountStaticIcons();
 const DB = {
   uid: () => Date.now().toString(36) + Math.random().toString(36).slice(2),
 
-  clientes:     () => CACHE.clientes,
-  vehiculos:    () => CACHE.vehiculos,
-  ordenes:      () => CACHE.ordenes,
-  parts:        () => CACHE.refacciones,
-  refacciones:  () => CACHE.refacciones,
-  cotizaciones: () => CACHE.cotizaciones,
-  remolques:    () => CACHE.remolques,
-  rentas:       () => CACHE.rentas,
+  // Devuelven una COPIA del arreglo (nunca la referencia interna de CACHE).
+  // Es critico: en varias pantallas se hace "let rows = DB.ordenes(); ...
+  // rows.push(nuevo)" para crear un registro. Si esto devolviera la MISMA
+  // referencia que CACHE.ordenes, ese .push() mutaria CACHE directamente
+  // ANTES de guardar, y _push() (que compara "antes" contra "despues" para
+  // solo enviar a Supabase lo que cambio) veria el registro nuevo como si
+  // ya hubiera estado ahi desde antes -- nunca lo subiria al servidor,
+  // aunque localmente pareciera guardado con exito. Asi se perdian las
+  // ordenes/clientes/etc. nuevos: parecian guardarse pero desaparecian al
+  // recargar porque jamas llegaron a Supabase.
+  clientes:     () => [...CACHE.clientes],
+  vehiculos:    () => [...CACHE.vehiculos],
+  ordenes:      () => [...CACHE.ordenes],
+  parts:        () => [...CACHE.refacciones],
+  refacciones:  () => [...CACHE.refacciones],
+  cotizaciones: () => [...CACHE.cotizaciones],
+  remolques:    () => [...CACHE.remolques],
+  rentas:       () => [...CACHE.rentas],
 
   /* Sincroniza cambios con Supabase en segundo plano. IMPORTANTE: solo envia
      los registros que realmente cambiaron (comparando contra "oldData", la
