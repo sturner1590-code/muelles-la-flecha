@@ -4541,10 +4541,12 @@ function saveRenta() {
 
   // No permitir guardar si el remolque ya tiene OTRO contrato FIRMADO cuyo
   // periodo se cruza con las fechas elegidas (evita rentar dos veces el
-  // mismo remolque para las mismas fechas).
+  // mismo remolque para las mismas fechas). Se compara con < (no <=) para
+  // permitir el mismo dia de entrega/devolucion: si un contrato termina el
+  // dia X, el remolque puede volver a rentarse desde ese mismo dia X.
   const conflicto = DB.rentas().find(r =>
     r.remolqueId === remolqueId && r.estado === 'activo' && r.id !== id &&
-    fechaInicio <= (r.fechaFin || r.fechaInicio) && r.fechaInicio <= fechaFin
+    fechaInicio < (r.fechaFin || r.fechaInicio) && r.fechaInicio < fechaFin
   );
   if (conflicto) {
     const remolque = DB.remolques().find(m => m.id === remolqueId);
