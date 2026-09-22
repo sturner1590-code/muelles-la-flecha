@@ -192,6 +192,8 @@
     .foto-thumb { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); background: #f3f4f6; }
     .foto-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .foto-thumb-remove { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%; background: rgba(0,0,0,.6); color: #fff; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+    .diagnostico-fecha-box { border: 1.5px solid #9ca3af; border-radius: 8px; padding: 14px 16px; margin-bottom: 14px; min-height: 54px; }
+    .diagnostico-fecha-box span { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .06em; }
     .fotos-grid-print { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: repeat(3, auto); gap: 10px; page-break-before: always; break-before: page; }
     .fotos-grid-print .foto-print-item { border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background: #f9fafb; }
     .fotos-grid-print .foto-print-item img { width: 100%; height: 260px; object-fit: cover; display: block; }
@@ -1012,6 +1014,7 @@
       <h3 id="detalle-titulo">Orden #0001</h3>
       <div style="display:flex;gap:8px;align-items:center">
         <button class="btn btn-secondary btn-sm" onclick="printOrden()"><span data-icon="printer"></span> Imprimir / PDF</button>
+        <button class="btn btn-secondary btn-sm" id="btn-imprimir-diagnostico" style="display:none" onclick="imprimirDiagnosticoOrden()"><span data-icon="filecheck"></span> Imprimir Diagnóstico</button>
         <button class="modal-close" onclick="closeModal('modal-orden-detalle')">✕</button>
       </div>
     </div>
@@ -1959,6 +1962,17 @@ function badge(data, val) {
   return `<span class="badge ${cls}">${lbl}</span>`;
 }
 
+/* Tarjeta con encabezado de color, usada en las vistas de impresion/detalle */
+function _secBox(color, ico, title, content) {
+  return `<div style="border-radius:8px;overflow:hidden;border:1.5px solid ${color}20;box-shadow:0 1px 3px ${color}15">
+       <div style="background:${color};padding:5px 12px;display:flex;align-items:center;gap:6px">
+         <span style="color:#fff;display:flex">${ico}</span>
+         <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#fff">${title}</span>
+       </div>
+       <div style="padding:8px 12px;background:#fff">${content}</div>
+     </div>`;
+}
+
 function fmt(n) { return '$' + Number(n||0).toLocaleString('es-MX', {minimumFractionDigits:2}); }
 
 /* Escapa HTML para insertar de forma segura texto proveniente de la base de datos
@@ -2563,6 +2577,9 @@ async function confirmImport() {
 }
 
 function _mostrarReporteImport({ total, successCount, failedItems, supabaseCount }) {
+  _printOrdenId = null;
+  const btnDiagRep = document.getElementById('btn-imprimir-diagnostico');
+  if (btnDiagRep) btnDiagRep.style.display = 'none';
   const ok = failedItems.length === 0;
   const coincide = supabaseCount === CACHE.refacciones.length;
 
@@ -3128,15 +3145,7 @@ function viewOrden(id) {
       </table>`
     : `<p style="color:#9ca3af;text-align:center;padding:16px;font-size:13px">Sin refacciones agregadas</p>`;
 
-  // Encabezado de sección con color de fondo
-  const secBox = (color, ico, title, content) =>
-    `<div style="border-radius:8px;overflow:hidden;border:1.5px solid ${color}20;box-shadow:0 1px 3px ${color}15">
-       <div style="background:${color};padding:5px 12px;display:flex;align-items:center;gap:6px">
-         <span style="color:#fff;display:flex">${ico}</span>
-         <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#fff">${title}</span>
-       </div>
-       <div style="padding:8px 12px;background:#fff">${content}</div>
-     </div>`;
+  const secBox = _secBox;
 
   const secLabel = (txt) =>
     `<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#1e3a8a;border-left:3px solid #dc2626;padding-left:8px;margin-bottom:10px">${txt}</div>`;
@@ -3255,6 +3264,8 @@ function viewOrden(id) {
     </div>`;
 
   document.querySelectorAll('#print-area .print-header').forEach(el => el.style.display = 'none');
+  const btnDiag = document.getElementById('btn-imprimir-diagnostico');
+  if (btnDiag) btnDiag.style.display = 'inline-flex';
   openModal('modal-orden-detalle');
 }
 
@@ -3263,6 +3274,104 @@ function printOrden() {
   headers.forEach(el => el.style.display = 'block');
   window.print();
   setTimeout(() => headers.forEach(el => el.style.display = 'none'), 500);
+}
+
+/* Version "Diagnóstico e Informe de Servicio": para entregar al cliente o a
+   un tercero sin exponer claves de refacciones ni precios, y sin fechas/horas
+   impresas (queda un recuadro en blanco para anotar la fecha a mano). Arma su
+   propio contenido de impresion, lo pone temporalmente en el modal, imprime,
+   y despues restaura la vista normal de la orden (viewOrden). */
+function imprimirDiagnosticoOrden() {
+  const id = _printOrdenId;
+  if (!id) return;
+  const o = DB.ordenes().find(o => o.id === id);
+  if (!o) return;
+
+  const cObj = DB.clientes().find(c => c.id === o.clienteId);
+  const clienteNombre = getClienteName(o.clienteId);
+  const vObj = DB.vehiculos().find(v => v.id === o.vehiculoId);
+
+  const clienteHtml = o.clienteId === 'NA'
+    ? '<span style="color:#9ca3af;font-size:13px">N/A</span>'
+    : cObj
+      ? `<div style="font-size:15px;font-weight:700;color:#111827;margin-bottom:5px">${esc(cObj.nombre)}</div>
+         ${cObj.telefono ? `<div style="font-size:12px;color:#6b7280;margin-bottom:3px;display:flex;align-items:center;gap:5px">${icon('phone',12)} ${esc(cObj.telefono)}</div>` : ''}
+         ${cObj.razonSocial ? `<div style="font-size:12px;color:#6b7280;display:flex;align-items:center;gap:5px">${icon('briefcase',12)} ${esc(cObj.razonSocial)}</div>` : ''}`
+      : `<div style="font-size:14px;font-weight:700">${clienteNombre}</div>`;
+
+  const vehHtml = vObj ? (() => {
+    const marcaModeloAnio = esc([vObj.marca, vObj.modelo, vObj.anio].filter(Boolean).join(' '));
+    return `<div style="margin-bottom:4px"><strong style="font-size:14px">${marcaModeloAnio || '—'}</strong></div>
+      ${vObj.numeroUnidad ? `<div style="margin-bottom:3px"><span style="color:#6b7280;font-size:12px">Núm. Unidad:</span> <strong>${esc(vObj.numeroUnidad)}</strong></div>` : ''}
+      ${vObj.placa       ? `<div style="margin-bottom:3px"><span style="color:#6b7280;font-size:12px">Placa:</span> ${esc(vObj.placa)}</div>` : ''}
+      ${vObj.vin         ? `<div><span style="color:#6b7280;font-size:12px">VIN:</span> <span style="font-family:monospace;font-size:11px;color:#374151">${esc(vObj.vin)}</span></div>` : ''}`;
+  })() : '<span style="color:#9ca3af">—</span>';
+
+  // Solo cantidad y descripcion -- sin clave/SKU ni precios.
+  const lineasHtml = (o.lineas && o.lineas.length)
+    ? `<table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="background:#1e3a8a">
+          <th style="padding:9px 10px;text-align:center;color:#fff;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;width:70px">Cant.</th>
+          <th style="padding:9px 10px;text-align:left;color:#fff;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Descripción</th>
+        </tr></thead>
+        <tbody>${o.lineas.map((l,li) => `<tr style="background:${li%2===0?'#fff':'#f0f7ff'}">
+          <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:center">${l.cantidad}</td>
+          <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">${esc(l.nombre)||'—'}</td>
+        </tr>`).join('')}</tbody>
+      </table>`
+    : `<p style="color:#9ca3af;text-align:center;padding:16px;font-size:13px">Sin refacciones agregadas</p>`;
+
+  const fotosPrintHtml = (o.evidenciaFotografica && o.evidenciaFotografica.length)
+    ? `<div class="fotos-grid-print print-header" style="display:none">
+        ${o.evidenciaFotografica.map(path => `<div class="foto-print-item"><img src="${esc(ordenFotoPublicUrl(path))}" alt="Evidencia fotográfica"></div>`).join('')}
+      </div>`
+    : '';
+
+  const html = `
+    <div id="print-area">
+      <div class="print-header" style="display:none;margin-bottom:20px">
+        <div style="background:linear-gradient(135deg,#7f1d1d 0%,#1e3a8a 100%);border-radius:10px;padding:18px 22px;display:flex;align-items:center;gap:16px;color:#fff">
+          <div style="flex-shrink:0;background:#fff;border-radius:8px;padding:4px;display:flex;align-items:center;justify-content:center">
+            <img src="Logo Muelles y Mofles.png" alt="Muelles y Mofles La Flecha" style="height:56px;width:auto;display:block">
+          </div>
+          <div style="flex:1">
+            <div style="font-size:20px;font-weight:800;letter-spacing:-.01em">Muelles y Mofles La Flecha</div>
+            <div style="font-size:18px;font-weight:700;opacity:.95;margin-top:4px">Diagnóstico e Informe de Servicio</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="print-header diagnostico-fecha-box" style="display:none">
+        <span>Fecha</span>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        ${_secBox('#dc2626', icon('user',13), 'Cliente', clienteHtml)}
+        ${_secBox('#1e3a8a', icon('truck',13), 'Vehículo', vehHtml)}
+      </div>
+
+      <div style="margin-bottom:16px">
+        <div style="background:#f59e0b;padding:7px 14px;border-radius:8px 8px 0 0;display:flex;align-items:center;gap:7px">
+          <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#fff;display:flex;align-items:center;gap:5px">${icon('wrench',12)} Descripción del Trabajo</span>
+        </div>
+        <div style="background:#fffbeb;border:1.5px solid #fde68a;border-top:none;border-radius:0 0 8px 8px;padding:12px;font-size:13px">${esc(o.descripcion)||'—'}</div>
+      </div>
+
+      <div style="margin-bottom:16px">
+        <div style="background:#1e3a8a;padding:7px 14px;border-radius:8px 8px 0 0">
+          <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#fff;display:flex;align-items:center;gap:5px">${icon('package',12)} Refacciones y Piezas</span>
+        </div>
+        <div style="border:1.5px solid #bfdbfe;border-top:none;border-radius:0 0 8px 8px;overflow:hidden">${lineasHtml}</div>
+      </div>
+
+      ${fotosPrintHtml}
+    </div>`;
+
+  document.getElementById('detalle-body').innerHTML = html;
+  const headers = document.querySelectorAll('#print-area .print-header');
+  headers.forEach(el => el.style.display = 'block');
+  window.print();
+  setTimeout(() => viewOrden(id), 600);
 }
 
 function openNewOrdenModal() {
@@ -4425,6 +4534,9 @@ function deleteCotizacion(id) {
 function viewCotizacion(id) {
   const c = DB.cotizaciones().find(c => c.id === id);
   if (!c) return;
+  _printOrdenId = null;
+  const btnDiag = document.getElementById('btn-imprimir-diagnostico');
+  if (btnDiag) btnDiag.style.display = 'none';
 
   const cliente   = getClienteName(c.clienteId);
   const vObj      = DB.vehiculos().find(v => v.id === c.vehiculoId);
