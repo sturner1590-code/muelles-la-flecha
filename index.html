@@ -3342,7 +3342,7 @@ function imprimirDiagnosticoOrden() {
       </div>
 
       <div class="print-header diagnostico-fecha-box" style="display:none">
-        <span>Fecha</span>
+        <span>Fecha de trabajo</span>
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
@@ -3362,6 +3362,11 @@ function imprimirDiagnosticoOrden() {
           <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#fff;display:flex;align-items:center;gap:5px">${icon('package',12)} Refacciones y Piezas</span>
         </div>
         <div style="border:1.5px solid #bfdbfe;border-top:none;border-radius:0 0 8px 8px;overflow:hidden">${lineasHtml}</div>
+      </div>
+
+      <div class="print-header" style="display:none;margin-top:48px;text-align:center">
+        <div style="border-top:1.5px solid #374151;width:260px;margin:0 auto 6px"></div>
+        <span style="font-size:12px;color:#374151">Firma de usuario</span>
       </div>
 
       ${fotosPrintHtml}
